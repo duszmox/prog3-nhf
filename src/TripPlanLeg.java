@@ -1,25 +1,25 @@
 import model.Stop;
 
+import java.time.Duration;
 import java.time.LocalTime;
 
 public class TripPlanLeg {
-    private EdgeType mode;          // Mode of transport: TRANSIT, WALK, PATHWAY
-    private Stop fromStop;          // Starting stop or location
-    private Stop toStop;            // Ending stop or location
-    private LocalTime startTime;    // Start time of the leg
-    private LocalTime endTime;      // End time of the leg
-    private String tripId;          // model.Trip ID for transit legs
-    private String routeId;         // model.Route ID for transit legs
-    private String routeShortName;  // Short name of the route
-    private String routeLongName;   // Long name of the route
-    private long transferTime;      // Transfer waiting time in seconds
-    private double distance;        // Distance in meters for walking legs
+    private LegType legType;          // Type of leg: TRANSIT, WALK, TRANSFER
+    private Stop fromStop;            // Starting stop or location
+    private Stop toStop;              // Ending stop or location
+    private LocalTime startTime;      // Start time of the leg
+    private LocalTime endTime;        // End time of the leg
+    private String tripId;            // Trip ID for transit legs
+    private String routeId;           // Route ID for transit legs
+    private String routeShortName;    // Short name of the route
+    private String routeLongName;     // Long name of the route
+    private double distance;          // Distance in meters for walking legs
+    private long duration;            // Duration of the leg in seconds (for transfers)
 
-    // Updated Constructor
-    public TripPlanLeg(EdgeType mode, Stop fromStop, Stop toStop, LocalTime startTime, LocalTime endTime,
-                       String tripId, String routeId, String routeShortName, String routeLongName,
-                       long transferTime, double distance) {
-        this.mode = mode;
+    // Constructor for TRANSIT and WALK legs
+    public TripPlanLeg(LegType legType, Stop fromStop, Stop toStop, LocalTime startTime, LocalTime endTime,
+                       String tripId, String routeId, String routeShortName, String routeLongName, double distance) {
+        this.legType = legType;
         this.fromStop = fromStop;
         this.toStop = toStop;
         this.startTime = startTime;
@@ -28,24 +28,29 @@ public class TripPlanLeg {
         this.routeId = routeId;
         this.routeShortName = routeShortName;
         this.routeLongName = routeLongName;
-        this.transferTime = transferTime;
         this.distance = distance;
+        this.duration = Duration.between(startTime, endTime).getSeconds();
+    }
+
+    // Constructor for TRANSFER legs
+    public TripPlanLeg(LegType legType, Stop transferStop, LocalTime startTime, LocalTime endTime) {
+        this.legType = legType;
+        this.fromStop = transferStop;
+        this.toStop = transferStop;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.duration = Duration.between(startTime, endTime).getSeconds();
     }
 
     // Getters and Setters
-
-    public EdgeType getMode() {
-        return mode;
-    }
-
-    public void setMode(EdgeType mode) {
-        this.mode = mode;
-    }
 
     public Stop getFromStop() {
         return fromStop;
     }
 
+    public LegType getLegType() {
+        return legType;
+    }
     public void setFromStop(Stop fromStop) {
         this.fromStop = fromStop;
     }
@@ -90,14 +95,6 @@ public class TripPlanLeg {
         this.routeId = routeId;
     }
 
-    public long getTransferTime() {
-        return transferTime;
-    }
-
-    public void setTransferTime(long transferTime) {
-        this.transferTime = transferTime;
-    }
-
     public double getDistance() {
         return distance;
     }
@@ -117,5 +114,11 @@ public class TripPlanLeg {
     }
     public void setRouteLongName(String routeLongName) {
         this.routeLongName = routeLongName;
+    }
+
+    public enum LegType {
+        TRANSIT,
+        WALK,
+        TRANSFER
     }
 }

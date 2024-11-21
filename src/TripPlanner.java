@@ -190,27 +190,22 @@ public class TripPlanner {
 
     // Shortest path algorithm with transfer limit and detailed leg information
     private List<TripPlanLeg> shortestPath(Map<String, List<Edge>> graph, String startStopId, String endStopId, LocalTime departureTime) {
-        // Priority queue to select the next node with the earliest arrival time
         PriorityQueue<NodeEntry> queue = new PriorityQueue<>(Comparator.comparingLong(ne -> ne.earliestArrivalTime));
         queue.add(new NodeEntry(startStopId, departureTime.toSecondOfDay(), null, 0, null, null));
 
-        // Map to keep track of the earliest arrival times
         Map<String, Long> earliestArrivalTimes = new HashMap<>();
         earliestArrivalTimes.put(startStopId, (long) departureTime.toSecondOfDay());
 
-        // Map to reconstruct the path
         Map<String, NodeEntry> previousNodes = new HashMap<>();
 
         while (!queue.isEmpty()) {
             NodeEntry current = queue.poll();
             String currentStopId = current.stopId;
 
-            // Early exit if we reached the destination
             if (currentStopId.equals(endStopId)) {
                 break;
             }
 
-            // Explore neighboring edges
             for (Edge edge : graph.getOrDefault(currentStopId, new ArrayList<>())) {
                 String neighborStopId = edge.toStopId;
                 long arrivalTimeAtNeighbor;
@@ -218,33 +213,27 @@ public class TripPlanner {
                 String currentTripId = current.tripId;
 
                 if (edge.type == EdgeType.TRANSIT) {
-                    // For transit edges, consider only departures after current time
                     if (edge.departureTime != null && edge.departureTime.toSecondOfDay() >= current.earliestArrivalTime) {
                         arrivalTimeAtNeighbor = edge.departureTime.toSecondOfDay() + edge.travelTime;
 
-                        // Check if transfer is needed
                         if (currentTripId == null || !currentTripId.equals(edge.tripId)) {
                             transfers += 1;
                         }
 
-                        // Skip if transfers exceed limit
                         if (transfers > 4) {
                             continue;
                         }
                     } else {
-                        continue; // Can't catch this transit edge
+                        continue;
                     }
                 } else {
-                    // For walking and pathways, start immediately
                     arrivalTimeAtNeighbor = current.earliestArrivalTime + edge.travelTime;
-                    // Transfer occurs if switching from transit to walk or pathway
                     if (currentTripId != null) {
                         transfers += 1;
-                        currentTripId = null; // Reset trip ID when walking
+                        currentTripId = null;
                     }
                 }
 
-                // Check if this is a better arrival time
                 if (arrivalTimeAtNeighbor < earliestArrivalTimes.getOrDefault(neighborStopId, Long.MAX_VALUE)) {
                     earliestArrivalTimes.put(neighborStopId, arrivalTimeAtNeighbor);
                     NodeEntry neighborEntry = new NodeEntry(neighborStopId, arrivalTimeAtNeighbor, current, transfers, edge.tripId != null ? edge.tripId : currentTripId, edge);
@@ -254,53 +243,62 @@ public class TripPlanner {
             }
         }
 
-        // Reconstruct the path with detailed leg information
         List<TripPlanLeg> tripPlan = new ArrayList<>();
         NodeEntry currentNode = previousNodes.get(endStopId);
 
         if (currentNode == null) {
-            // No path found
             System.out.println("No available path found.");
             return new ArrayList<>();
         }
 
-// Map to get model.Stop objects by stop ID
         Map<String, Stop> stopMap = new HashMap<>();
         for (Stop stop : stops) {
             stopMap.put(stop.getStopId(), stop);
         }
 
-// Map to get model.Trip objects by trip ID
         Map<String, Trip> tripMap = new HashMap<>();
         for (Trip trip : trips) {
             tripMap.put(trip.getTripId(), trip);
         }
 
-// Map to get model.Route objects by route ID
         Map<String, Route> routeMap = new HashMap<>();
         for (Route route : routes) {
             routeMap.put(route.getRouteId(), route);
         }
 
-// Reconstruct the path in reverse order
+        // Reconstruct the path in reverse order
+        List<NodeEntry> pathNodes = new ArrayList<>();
         while (currentNode.previousNode != null) {
-            NodeEntry prevNode = currentNode.previousNode;
-            Edge edge = currentNode.edge;
+            pathNodes.add(currentNode);
+            currentNode = currentNode.previousNode;
+        }
+        Collections.reverse(pathNodes);
+
+        // Build trip plan with transfers
+        String previousTripId = null;
+        LocalTime previousArrivalTime = null;
+        Stop previousStop = null;
+
+        for (int i = 0; i < pathNodes.size(); i++) {
+            NodeEntry node = pathNodes.get(i);
+            NodeEntry prevNode = node.previousNode;
+            Edge edge = node.edge;
 
             Stop fromStop = stopMap.get(prevNode.stopId);
-            Stop toStop = stopMap.get(currentNode.stopId);
+            Stop toStop = stopMap.get(node.stopId);
 
             LocalTime startTime = LocalTime.ofSecondOfDay(prevNode.earliestArrivalTime % 86400);
-            LocalTime endTime = LocalTime.ofSecondOfDay(currentNode.earliestArrivalTime % 86400);
+            LocalTime endTime = LocalTime.ofSecondOfDay(node.earliestArrivalTime % 86400);
 
-            EdgeType mode = edge.type;
+            TripPlanLeg.LegType legType;
             String tripId = edge.tripId;
             String routeId = null;
             String routeShortName = null;
             String routeLongName = null;
+            double distance = 0.0;
 
-            // Get route information from trip ID
-            if (tripId != null) {
+            if (edge.type == EdgeType.TRANSIT) {
+                legType = TripPlanLeg.LegType.TRANSIT;
                 Trip trip = tripMap.get(tripId);
                 if (trip != null) {
                     routeId = trip.getRouteId();
@@ -310,53 +308,54 @@ public class TripPlanner {
                         routeLongName = route.getRouteLongName().orElse("");
                     }
                 }
-            }
-
-            long transferTime = 0;
-            double distance = 0.0;
-
-            if (mode == EdgeType.WALK || mode == EdgeType.PATHWAY) {
-                // Calculate distance for walking legs
+            } else if (edge.type == EdgeType.WALK || edge.type == EdgeType.PATHWAY) {
+                legType = TripPlanLeg.LegType.WALK;
                 distance = haversine(
                         fromStop.getStopLat(), fromStop.getStopLon(),
                         toStop.getStopLat(), toStop.getStopLon()
                 );
+            } else {
+                legType = TripPlanLeg.LegType.WALK; // Default to WALK for any other types
             }
 
-            TripPlanLeg leg = new TripPlanLeg(
-                    mode,
-                    fromStop,
-                    toStop,
-                    startTime,
-                    endTime,
-                    tripId,
-                    routeId,
-                    routeShortName,
-                    routeLongName,
-                    transferTime,
-                    distance
-            );
+            // Check for transfer
+            if (previousTripId != null && tripId != null && !previousTripId.equals(tripId)) {
+                // Insert transfer leg
+                TripPlanLeg transferLeg = new TripPlanLeg(
+                        TripPlanLeg.LegType.TRANSFER,
+                        fromStop,
+                        previousArrivalTime,
+                        startTime
+                );
+                tripPlan.add(transferLeg);
 
-            tripPlan.addFirst(leg); // Add to the beginning since we're reconstructing in reverse
-            currentNode = prevNode;
-        }
+            }
 
-        // Optionally, calculate transfer times between legs
-        for (int i = 1; i < tripPlan.size(); i++) {
-            TripPlanLeg previousLeg = tripPlan.get(i - 1);
-            TripPlanLeg currentLeg = tripPlan.get(i);
-            if (previousLeg.getTripId() == null || currentLeg.getTripId() == null) {
-                continue;
+            // Only add transfer if the next leg is a transit leg
+            if (legType == TripPlanLeg.LegType.TRANSIT || legType == TripPlanLeg.LegType.WALK) {
+                TripPlanLeg leg = new TripPlanLeg(
+                        legType,
+                        fromStop,
+                        toStop,
+                        startTime,
+                        endTime,
+                        tripId,
+                        routeId,
+                        routeShortName,
+                        routeLongName,
+                        distance
+                );
+                tripPlan.add(leg);
             }
-            if (!previousLeg.getTripId().equals(currentLeg.getTripId())) {
-                // Transfer occurred
-                long transferTimeInSeconds = Duration.between(previousLeg.getEndTime(), currentLeg.getStartTime()).getSeconds();
-                currentLeg.setTransferTime(transferTimeInSeconds);
-            }
+
+            previousTripId = tripId;
+            previousArrivalTime = endTime;
+            previousStop = toStop;
         }
 
         return tripPlan;
     }
+
 
     // Helper function to get model.Trip by ID
     private Trip getTripById(String tripId) {

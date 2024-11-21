@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import model.Route;
+import model.Route; // Ensure this import matches your project structure
 
 public class TransitItineraryWithLines extends JFrame {
     private Map<String, Route> routeMap;
@@ -19,9 +19,10 @@ public class TransitItineraryWithLines extends JFrame {
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(Color.WHITE);
 
-        // Define fixed widths for Time and Details sections
+        // Define fixed widths for Time and Line sections
         int timeWidth = 60;
-        int detailsWidth = 300;
+        int lineWidth = 30; // Fixed width for the line component
+        int spacerWidth = 10; // Spacer between line and details
 
         // Loop through the tripPlan and add itinerary items
         for (int i = 0; i < tripPlan.size(); i++) {
@@ -30,22 +31,24 @@ public class TransitItineraryWithLines extends JFrame {
             boolean isFirstLeg = (i == 0);
 
             // Create the panel for the leg
-            JPanel legPanel = createStopPanel(leg, isFirstLeg, isLastLeg, timeWidth, detailsWidth);
+            JPanel legPanel = createStopPanel(leg, isFirstLeg, isLastLeg, timeWidth, lineWidth, spacerWidth);
             mainPanel.add(legPanel);
         }
 
         // Add the final destination stop
         TripPlanLeg lastLeg = tripPlan.get(tripPlan.size() - 1);
-        JPanel finalStopPanel = createFinalStopPanel(lastLeg, timeWidth, detailsWidth);
+        JPanel finalStopPanel = createFinalStopPanel(lastLeg, timeWidth, lineWidth, spacerWidth);
         mainPanel.add(finalStopPanel);
 
         JScrollPane scrollPane = new JScrollPane(mainPanel);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
         add(scrollPane);
 
         setVisible(true);
     }
 
-    private JPanel createStopPanel(TripPlanLeg leg, boolean isFirstLeg, boolean isLastLeg, int timeWidth, int detailsWidth) {
+    private JPanel createStopPanel(TripPlanLeg leg, boolean isFirstLeg, boolean isLastLeg,
+                                   int timeWidth, int lineWidth, int spacerWidth) {
         JPanel stopPanel = new JPanel();
         stopPanel.setLayout(new BoxLayout(stopPanel, BoxLayout.X_AXIS));
         stopPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
@@ -59,44 +62,58 @@ public class TransitItineraryWithLines extends JFrame {
         timeLabel.setPreferredSize(new Dimension(timeWidth, 30));
         timeLabel.setMinimumSize(new Dimension(timeWidth, 30));
         timeLabel.setMaximumSize(new Dimension(timeWidth, 30));
-        timeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        timeLabel.setAlignmentY(Component.TOP_ALIGNMENT);
         stopPanel.add(timeLabel);
 
         // Spacer between time and line
-        stopPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+        stopPanel.add(Box.createRigidArea(new Dimension(spacerWidth, 0)));
 
-        // Line component
+        // Line component inside a vertical box to align multiple lines
+        JPanel lineContainer = new JPanel();
+        lineContainer.setLayout(new BoxLayout(lineContainer, BoxLayout.Y_AXIS));
+        lineContainer.setBackground(Color.WHITE);
+        lineContainer.setPreferredSize(new Dimension(lineWidth, 50));
+        lineContainer.setMaximumSize(new Dimension(lineWidth, Integer.MAX_VALUE));
+
         LineComponent lineComponent = new LineComponent(leg, isFirstLeg, isLastLeg);
-        lineComponent.setPreferredSize(new Dimension(30, 50));
-        lineComponent.setMaximumSize(new Dimension(20, Integer.MAX_VALUE));
-        stopPanel.add(lineComponent);
+        lineComponent.setPreferredSize(new Dimension(lineWidth, 50));
+        lineComponent.setMaximumSize(new Dimension(lineWidth, Integer.MAX_VALUE));
+        lineContainer.add(lineComponent);
+
+        stopPanel.add(lineContainer);
 
         // Spacer between line and details
-        stopPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+        stopPanel.add(Box.createRigidArea(new Dimension(spacerWidth, 0)));
 
         // Details panel
         JPanel detailsPanel = new JPanel();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
         detailsPanel.setBackground(Color.WHITE);
-        detailsPanel.setPreferredSize(new Dimension(detailsWidth, 50));
-        detailsPanel.setMaximumSize(new Dimension(detailsWidth, Integer.MAX_VALUE));
+        detailsPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        // Allow details panel to expand
+        detailsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
 
-        JLabel stopLabel = new JLabel(leg.getFromStop().getStopName());
+        // Stop name
+        String stopName = leg.getFromStop().getStopName();
+        JLabel stopLabel = new JLabel(stopName);
         stopLabel.setFont(new Font("Arial", Font.PLAIN, 14));
 
+        // Transport details
         String transport = "";
         String details = "";
 
-        if (leg.getMode() == EdgeType.TRANSIT) {
-            transport = getTransportModeName(leg.getRouteId()) + " " + leg.getRouteShortName();
+        if (leg.getLegType() == TripPlanLeg.LegType.TRANSIT) {
+            transport = leg.getRouteShortName() + " " + getTransportModeName(leg.getRouteId());
             long durationMinutes = Duration.between(leg.getStartTime(), leg.getEndTime()).toMinutes();
             details = durationMinutes + " min";
-        } else if (leg.getMode() == EdgeType.WALK || leg.getMode() == EdgeType.PATHWAY) {
+        } else if (leg.getLegType() == TripPlanLeg.LegType.WALK) {
             transport = "Walking";
             long durationMinutes = Duration.between(leg.getStartTime(), leg.getEndTime()).toMinutes();
             details = durationMinutes + " min, " + String.format("%.0f m", leg.getDistance());
-        } else {
-            transport = leg.getMode().toString();
+        } else if (leg.getLegType() == TripPlanLeg.LegType.TRANSFER) {
+            transport = "Transfer";
+            long durationMinutes = Duration.between(leg.getStartTime(), leg.getEndTime()).toMinutes();
+            details = durationMinutes + " min wait";
         }
 
         JLabel transportLabel = new JLabel(transport + (details.isEmpty() ? "" : " - " + details));
@@ -104,6 +121,7 @@ public class TransitItineraryWithLines extends JFrame {
         transportLabel.setForeground(Color.GRAY);
 
         detailsPanel.add(stopLabel);
+        detailsPanel.add(Box.createRigidArea(new Dimension(0, 5)));
         detailsPanel.add(transportLabel);
 
         stopPanel.add(detailsPanel);
@@ -111,13 +129,13 @@ public class TransitItineraryWithLines extends JFrame {
         return stopPanel;
     }
 
-    private JPanel createFinalStopPanel(TripPlanLeg leg, int timeWidth, int detailsWidth) {
+    private JPanel createFinalStopPanel(TripPlanLeg leg, int timeWidth, int lineWidth, int spacerWidth) {
         JPanel stopPanel = new JPanel();
         stopPanel.setLayout(new BoxLayout(stopPanel, BoxLayout.X_AXIS));
-        stopPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+        stopPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
         stopPanel.setBackground(Color.WHITE);
 
-        // Time label
+        // Time label (end time)
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
         String time = leg.getEndTime().format(timeFormatter);
         JLabel timeLabel = new JLabel(time);
@@ -125,29 +143,39 @@ public class TransitItineraryWithLines extends JFrame {
         timeLabel.setPreferredSize(new Dimension(timeWidth, 30));
         timeLabel.setMinimumSize(new Dimension(timeWidth, 30));
         timeLabel.setMaximumSize(new Dimension(timeWidth, 30));
-        timeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        timeLabel.setAlignmentY(Component.TOP_ALIGNMENT);
         stopPanel.add(timeLabel);
 
         // Spacer between time and line
-        stopPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+        stopPanel.add(Box.createRigidArea(new Dimension(spacerWidth, 0)));
 
-        // Line component
+        // Line component (only top part since it's the last stop)
+        JPanel lineContainer = new JPanel();
+        lineContainer.setLayout(new BoxLayout(lineContainer, BoxLayout.Y_AXIS));
+        lineContainer.setBackground(Color.WHITE);
+        lineContainer.setPreferredSize(new Dimension(lineWidth, 50));
+        lineContainer.setMaximumSize(new Dimension(lineWidth, Integer.MAX_VALUE));
+
         LineComponent lineComponent = new LineComponent(null, false, true);
-        lineComponent.setPreferredSize(new Dimension(30, 50));
-        lineComponent.setMaximumSize(new Dimension(20, Integer.MAX_VALUE));
-        stopPanel.add(lineComponent);
+        lineComponent.setPreferredSize(new Dimension(lineWidth, 50));
+        lineComponent.setMaximumSize(new Dimension(lineWidth, Integer.MAX_VALUE));
+        lineContainer.add(lineComponent);
+
+        stopPanel.add(lineContainer);
 
         // Spacer between line and details
-        stopPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+        stopPanel.add(Box.createRigidArea(new Dimension(spacerWidth, 0)));
 
         // Details panel
         JPanel detailsPanel = new JPanel();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
         detailsPanel.setBackground(Color.WHITE);
-        detailsPanel.setPreferredSize(new Dimension(detailsWidth, 50));
-        detailsPanel.setMaximumSize(new Dimension(detailsWidth, Integer.MAX_VALUE));
+        detailsPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        detailsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
 
-        JLabel stopLabel = new JLabel(leg.getToStop().getStopName());
+        // Final stop name
+        String stopName = leg.getToStop().getStopName();
+        JLabel stopLabel = new JLabel(stopName);
         stopLabel.setFont(new Font("Arial", Font.BOLD, 14));
 
         detailsPanel.add(stopLabel);
@@ -173,7 +201,6 @@ public class TransitItineraryWithLines extends JFrame {
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
 
-            // Draw line between top and bottom
             Graphics2D g2 = (Graphics2D) g;
 
             int x = getWidth() / 2;
@@ -183,23 +210,29 @@ public class TransitItineraryWithLines extends JFrame {
             if (isFirstLeg) {
                 yStart = getHeight() / 2;
             }
-            if (isLastLeg) {
-                yEnd = getHeight() / 2;
-            }
 
-            if (leg != null && (leg.getMode() == EdgeType.WALK || leg.getMode() == EdgeType.PATHWAY)) {
-                // Dotted line for walking
-                float[] dashPattern = {5, 5};
-                g2.setStroke(new BasicStroke(2, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, dashPattern, 0));
-                g2.setColor(Color.GRAY);
-            } else {
-                // Solid line for transit or final stop
-                g2.setStroke(new BasicStroke(2));
-                if (leg != null && routeMap.containsKey(leg.getRouteId())) {
-                    g2.setColor(routeMap.get(leg.getRouteId()).getColor());
-                } else {
+            if (leg != null) {
+                if (leg.getLegType() == TripPlanLeg.LegType.WALK) {
+                    // Dotted line for walking
+                    float[] dashPattern = {5, 5};
+                    g2.setStroke(new BasicStroke(3, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, dashPattern, 0));
                     g2.setColor(Color.GRAY);
+                } else if (leg.getLegType() == TripPlanLeg.LegType.TRANSIT) {
+                    if (routeMap != null && routeMap.containsKey(leg.getRouteId())) {
+                        g2.setColor(routeMap.get(leg.getRouteId()).getColor());
+                    } else {
+                        g2.setColor(Color.GRAY);
+                    }
+                } else if (leg.getLegType() == TripPlanLeg.LegType.TRANSFER) {
+                    // Dashed line for transfer
+                    float[] dashPattern = {10, 10};
+                    g2.setStroke(new BasicStroke(3, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, dashPattern, 0));
+                    g2.setColor(Color.ORANGE);
                 }
+            } else {
+                // Default line for final stop
+                g2.setStroke(new BasicStroke(3));
+                g2.setColor(Color.GRAY);
             }
 
             g2.drawLine(x, yStart, x, yEnd);
@@ -210,26 +243,17 @@ public class TransitItineraryWithLines extends JFrame {
         Route route = routeMap.get(routeId);
         if (route != null) {
             int routeType = route.getRouteType();
-            switch (routeType) {
-                case 0:
-                    return "Tram";
-                case 1:
-                    return "Subway";
-                case 2:
-                    return "Rail";
-                case 3:
-                    return "Bus";
-                case 4:
-                    return "Ferry";
-                case 5:
-                    return "Cable Car";
-                case 6:
-                    return "Gondola";
-                case 7:
-                    return "Funicular";
-                default:
-                    return "Transit";
-            }
+            return switch (routeType) {
+                case 0 -> "Tram";
+                case 1 -> "Subway";
+                case 2 -> "Rail";
+                case 3 -> "Bus";
+                case 4 -> "Ferry";
+                case 5 -> "Cable Car";
+                case 6 -> "Gondola";
+                case 7 -> "Funicular";
+                default -> "Trolley";
+            };
         }
         return "Transit";
     }

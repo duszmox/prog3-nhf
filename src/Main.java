@@ -38,23 +38,21 @@ public class Main {
         
         // Print the itinerary
         for (TripPlanLeg leg : tripPlan) {
-            System.out.println("Mode: " + leg.getMode());
+            System.out.println("Mode: " + leg.getLegType());
             System.out.println("From: " + leg.getFromStop().getStopName());
             System.out.println("To: " + leg.getToStop().getStopName());
             System.out.println("Start Time: " + leg.getStartTime());
             System.out.println("End Time: " + leg.getEndTime());
-            if (leg.getMode() == EdgeType.TRANSIT) {
+            if (leg.getLegType() == TripPlanLeg.LegType.TRANSIT) {
                 System.out.println("model.Trip ID: " + leg.getTripId());
                 System.out.println("model.Route ID: " + leg.getRouteId());
                 System.out.println("model.Route Short Name: " + leg.getRouteShortName());
                 System.out.println("model.Route Long Name: " + leg.getRouteLongName());
             }
-            if (leg.getMode() == EdgeType.WALK || leg.getMode() == EdgeType.PATHWAY) {
+            if (leg.getLegType() == TripPlanLeg.LegType.WALK) {
                 System.out.println("Distance: " + leg.getDistance() + " meters");
             }
-            if (leg.getTransferTime() > 0) {
-                System.out.println("Transfer Time: " + leg.getTransferTime() + " seconds");
-            }
+
             System.out.println("--------------------------------------------------");
         }
         System.out.println("Total legs: " + tripPlan.size());
