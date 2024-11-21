@@ -1,9 +1,13 @@
+import java.time.LocalDate;
 import java.util.Optional;
+
+import java.util.List;
 
 public class Trip {
     private String routeId;                        // Required
     private String tripId;                         // Required
     private String serviceId;                      // Required
+    private List<LocalDate> serviceDates;          // Required for service dates
     private Optional<String> tripHeadsign;         // Optional
     private Optional<Integer> directionId;         // Optional (0 = outbound, 1 = inbound)
     private Optional<String> blockId;              // Optional
@@ -11,7 +15,6 @@ public class Trip {
     private Optional<Integer> wheelchairAccessible;// Optional (0 = no info, 1 = accessible, 2 = not accessible)
     private Optional<Integer> bikesAllowed;        // Optional (0 = no info, 1 = allowed, 2 = not allowed)
 
-    // Constructor with all fields (including optional ones)
     public Trip(String routeId, String tripId, String serviceId,
                 Optional<String> tripHeadsign, Optional<Integer> directionId,
                 Optional<String> blockId, Optional<String> shapeId,
@@ -32,6 +35,11 @@ public class Trip {
         this(routeId, tripId, serviceId, Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
+
+    // Getter and setter for serviceDates
+    public List<LocalDate> getServiceDates() { return serviceDates; }
+    public void setServiceDates(List<LocalDate> serviceDates) { this.serviceDates = serviceDates; }
+
 
     // Getters and setters
     public String getRouteId() { return routeId; }

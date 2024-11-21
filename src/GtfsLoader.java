@@ -1,9 +1,9 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 import com.opencsv.CSVReader;
 
@@ -25,7 +25,7 @@ public class GtfsLoader {
                 double stopLon = Double.parseDouble(line[3]); // stop_lon
                 Optional<String> stopCode = Optional.ofNullable(line[4].isEmpty() ? null : line[4]); // stop_code
                 Optional<Integer> locationType = Optional.ofNullable(line[5].isEmpty() ? null : Integer.parseInt(line[5])); // location_type
-                Optional<String> parentStation = Optional.ofNullable(line[6].isEmpty() ? null : line[6]); // parent_station
+                Optional<String> parentStation = Optional.ofNullable(line[7].isEmpty() ? null : line[7]); // parent_station
 
                 // Create Stop object and add to the list
                 Stop stop = new Stop(stopId, stopName, stopLat, stopLon, stopCode, locationType, Optional.empty(), parentStation, Optional.empty());
@@ -58,6 +58,28 @@ public class GtfsLoader {
             }
         }
         return trips;
+    }
+    public static Map<String, List<LocalDate>> loadCalendarDates(String filePath) throws Exception {
+        Map<String, List<LocalDate>> serviceDatesMap = new HashMap<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+        try (CSVReader reader = new CSVReader(new FileReader(filePath))) {
+            String[] line;
+            // Skip the header line
+            reader.readNext();
+
+            while ((line = reader.readNext()) != null) {
+                String serviceId = line[0];                    // service_id
+                LocalDate date = LocalDate.parse(line[1], formatter); // date (yyyyMMdd)
+                int exceptionType = Integer.parseInt(line[2]); // exception_type (1 = added, 2 = removed)
+
+                // Only consider added service dates
+                if (exceptionType == 1) {
+                    serviceDatesMap.computeIfAbsent(serviceId, k -> new ArrayList<>()).add(date);
+                }
+            }
+        }
+        return serviceDatesMap;
     }
 
     public static List<StopTime> loadStopTimes(String filePath) throws Exception {
