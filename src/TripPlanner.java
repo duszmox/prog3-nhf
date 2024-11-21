@@ -1,3 +1,5 @@
+import model.*;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Duration;
@@ -176,7 +178,7 @@ public class TripPlanner {
         return relevantStopIds;
     }
 
-    // Helper function to get Stop by ID
+    // Helper function to get model.Stop by ID
     private Stop getStopById(String stopId) {
         for (Stop stop : stops) {
             if (stop.getStopId().equals(stopId)) {
@@ -262,19 +264,19 @@ public class TripPlanner {
             return new ArrayList<>();
         }
 
-// Map to get Stop objects by stop ID
+// Map to get model.Stop objects by stop ID
         Map<String, Stop> stopMap = new HashMap<>();
         for (Stop stop : stops) {
             stopMap.put(stop.getStopId(), stop);
         }
 
-// Map to get Trip objects by trip ID
+// Map to get model.Trip objects by trip ID
         Map<String, Trip> tripMap = new HashMap<>();
         for (Trip trip : trips) {
             tripMap.put(trip.getTripId(), trip);
         }
 
-// Map to get Route objects by route ID
+// Map to get model.Route objects by route ID
         Map<String, Route> routeMap = new HashMap<>();
         for (Route route : routes) {
             routeMap.put(route.getRouteId(), route);
@@ -356,7 +358,7 @@ public class TripPlanner {
         return tripPlan;
     }
 
-    // Helper function to get Trip by ID
+    // Helper function to get model.Trip by ID
     private Trip getTripById(String tripId) {
         for (Trip trip : trips) {
             if (trip.getTripId().equals(tripId)) {

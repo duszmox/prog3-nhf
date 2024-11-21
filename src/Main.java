@@ -1,3 +1,5 @@
+import model.*;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -42,10 +44,10 @@ public class Main {
             System.out.println("Start Time: " + leg.getStartTime());
             System.out.println("End Time: " + leg.getEndTime());
             if (leg.getMode() == EdgeType.TRANSIT) {
-                System.out.println("Trip ID: " + leg.getTripId());
-                System.out.println("Route ID: " + leg.getRouteId());
-                System.out.println("Route Short Name: " + leg.getRouteShortName());
-                System.out.println("Route Long Name: " + leg.getRouteLongName());
+                System.out.println("model.Trip ID: " + leg.getTripId());
+                System.out.println("model.Route ID: " + leg.getRouteId());
+                System.out.println("model.Route Short Name: " + leg.getRouteShortName());
+                System.out.println("model.Route Long Name: " + leg.getRouteLongName());
             }
             if (leg.getMode() == EdgeType.WALK || leg.getMode() == EdgeType.PATHWAY) {
                 System.out.println("Distance: " + leg.getDistance() + " meters");

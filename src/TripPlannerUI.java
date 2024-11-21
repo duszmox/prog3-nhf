@@ -1,6 +1,7 @@
+import model.*;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -36,7 +37,7 @@ public class TripPlannerUI extends JFrame {
         this.tripPlanner = new TripPlanner(stops, stopTimes, pathways, trips, routes);
 
         // Set up the frame
-        setTitle("GTFS Trip Planner");
+        setTitle("GTFS model.Trip Planner");
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -46,8 +47,8 @@ public class TripPlannerUI extends JFrame {
         endStopComboBox = new AutoCompleteComboBox(parentStations);
 
         // If using SwingX library
-        // startStopComboBox = new JComboBox<>(parentStations.toArray(new Stop[0]));
-        // endStopComboBox = new JComboBox<>(parentStations.toArray(new Stop[0]));
+        // startStopComboBox = new JComboBox<>(parentStations.toArray(new model.Stop[0]));
+        // endStopComboBox = new JComboBox<>(parentStations.toArray(new model.Stop[0]));
         // AutoCompleteDecorator.decorate(startStopComboBox);
         // AutoCompleteDecorator.decorate(endStopComboBox);
 

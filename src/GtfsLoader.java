@@ -1,4 +1,3 @@
-import java.io.BufferedReader;
 import java.io.FileReader;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -6,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import com.opencsv.CSVReader;
+import model.*;
 
 
 public class GtfsLoader {
@@ -27,7 +27,7 @@ public class GtfsLoader {
                 Optional<Integer> locationType = Optional.ofNullable(line[5].isEmpty() ? null : Integer.parseInt(line[5])); // location_type
                 Optional<String> parentStation = Optional.ofNullable(line[7].isEmpty() ? null : line[7]); // parent_station
 
-                // Create Stop object and add to the list
+                // Create model.Stop object and add to the list
                 Stop stop = new Stop(stopId, stopName, stopLat, stopLon, stopCode, locationType, Optional.empty(), parentStation, Optional.empty());
                 stops.add(stop);
             }
@@ -52,7 +52,7 @@ public class GtfsLoader {
                 Optional<Integer> wheelchairAccessible = Optional.ofNullable(line[7].isEmpty() ? null : Integer.parseInt(line[7]));  // wheelchair_accessible
                 Optional<Integer> bikesAllowed = Optional.ofNullable(line[8].isEmpty() ? null : Integer.parseInt(line[8]));  // bikes_allowed
 
-                // Create Trip object and add to the list
+                // Create model.Trip object and add to the list
                 Trip trip = new Trip(routeId, tripId, serviceId, tripHeadsign, directionId, blockId, shapeId, wheelchairAccessible, bikesAllowed);
                 trips.add(trip);
             }
@@ -108,7 +108,7 @@ public class GtfsLoader {
                 Optional<Integer> dropOffType = Optional.ofNullable(line[7].isEmpty() ? null : Integer.parseInt(line[7]));
                 Optional<Double> shapeDistTraveled = Optional.ofNullable(line[8].isEmpty() ? null : Double.parseDouble(line[8]));
 
-                // Create StopTime object and add to the list
+                // Create model.StopTime object and add to the list
                 StopTime stopTime = new StopTime(tripId, stopId, arrivalTime, departureTime, stopSequence, stopHeadsign, pickupType, dropOffType, shapeDistTraveled);
                 stopTimes.add(stopTime);
             }
@@ -131,7 +131,7 @@ public class GtfsLoader {
                 String toStopId = line[4];                           // to_stop_id
                 Optional<Integer> traversalTime = Optional.ofNullable(line[5].isEmpty() ? null : Integer.parseInt(line[5]));  // traversal_time
 
-                // Create Pathway object and add to the list
+                // Create model.Pathway object and add to the list
                 Pathway pathway = new Pathway(pathwayId, pathwayMode, isBidirectional, fromStopId, toStopId, traversalTime);
                 pathways.add(pathway);
             }
@@ -153,7 +153,7 @@ public class GtfsLoader {
                 Optional<String> agencyLang = Optional.ofNullable(line[4].isEmpty() ? null : line[4]);  // agency_lang
                 Optional<String> agencyPhone = Optional.ofNullable(line[5].isEmpty() ? null : line[5]);  // agency_phone
 
-                // Create Agency object and add to the list
+                // Create model.Agency object and add to the list
                 Agency agency = new Agency(agencyId, agencyName, agencyUrl, agencyTimezone, agencyLang, agencyPhone);
                 agencies.add(agency);
             }
@@ -178,7 +178,7 @@ public class GtfsLoader {
                 Optional<String> routeTextColor = Optional.ofNullable(line[7].isEmpty() ? null : line[7]);  // route_text_color
                 Optional<Integer> routeSortOrder = Optional.ofNullable(line[8].isEmpty() ? null : Integer.parseInt(line[8]));  // route_sort_order
 
-                // Create Route object and add it to the list
+                // Create model.Route object and add it to the list
                 Route route = new Route(agencyId, routeId, routeShortName, routeLongName, routeType, routeDesc, routeColor, routeTextColor, routeSortOrder);
                 routes.add(route);
             }

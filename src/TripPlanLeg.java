@@ -1,3 +1,5 @@
+import model.Stop;
+
 import java.time.LocalTime;
 
 public class TripPlanLeg {
@@ -6,8 +8,8 @@ public class TripPlanLeg {
     private Stop toStop;            // Ending stop or location
     private LocalTime startTime;    // Start time of the leg
     private LocalTime endTime;      // End time of the leg
-    private String tripId;          // Trip ID for transit legs
-    private String routeId;         // Route ID for transit legs
+    private String tripId;          // model.Trip ID for transit legs
+    private String routeId;         // model.Route ID for transit legs
     private String routeShortName;  // Short name of the route
     private String routeLongName;   // Long name of the route
     private long transferTime;      // Transfer waiting time in seconds
