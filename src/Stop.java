@@ -59,4 +59,9 @@ public class Stop {
 
     public Optional<Integer> getWheelchairBoarding() { return wheelchairBoarding; }
     public void setWheelchairBoarding(Optional<Integer> wheelchairBoarding) { this.wheelchairBoarding = wheelchairBoarding; }
+
+    @Override
+    public String toString() {
+        return getStopName(); // Use the getter method
+    }
 }

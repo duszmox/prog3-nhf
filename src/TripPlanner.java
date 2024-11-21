@@ -119,7 +119,7 @@ public class TripPlanner {
                     );
                     if (distance <= 3000) {
                         // Estimate walking time (average speed 5 km/h)
-                        long walkingTime = (long) ((distance / 1000) / 5 * 3600);
+                        long walkingTime = (long) (((distance / 1000) / 5 * 3600) + 0.5);
                         Edge edge = new Edge(stopIdB, walkingTime, EdgeType.WALK, null, null);
                         graph.get(stopIdA).add(edge);
                     }
