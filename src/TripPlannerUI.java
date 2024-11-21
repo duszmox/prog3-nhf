@@ -20,6 +20,7 @@ public class TripPlannerUI extends JFrame {
     private JSpinner timeSpinner;
     private TripPlanner tripPlanner;
     private JDialog loadingDialog;
+    private List<Route> routes;
 
 
     public TripPlannerUI(List<Stop> stops, List<StopTime> stopTimes, List<Pathway> pathways, List<Trip> trips, List<Route> routes) {
@@ -35,7 +36,7 @@ public class TripPlannerUI extends JFrame {
 
         // Initialize TripPlanner
         this.tripPlanner = new TripPlanner(stops, stopTimes, pathways, trips, routes);
-
+        this.routes = routes;
         // Set up the frame
         setTitle("GTFS model.Trip Planner");
         setSize(400, 300);
@@ -130,9 +131,12 @@ public class TripPlannerUI extends JFrame {
                     if (tripPlan.isEmpty()) {
                         JOptionPane.showMessageDialog(TripPlannerUI.this, "No available path found.", "Info", JOptionPane.INFORMATION_MESSAGE);
                     } else {
-                        // Display the trip plan
-                        TripPlanView tripPlanView = new TripPlanView(tripPlan);
-                        tripPlanView.setVisible(true);
+                        Map<String, Route> routeMap = new HashMap<>();
+                        for (Route route : routes) {
+                            routeMap.put(route.getRouteId(), route);
+                        }
+                        TransitItineraryWithLines itineraryView = new TransitItineraryWithLines(tripPlan, routeMap);
+                        itineraryView.setVisible(true);
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();

@@ -5,8 +5,6 @@ import java.util.List;
 
 public class TripPlanView extends JFrame {
 
-    private JTable tripTable;
-
     public TripPlanView(List<TripPlanLeg> tripPlan) {
         setTitle("model.Trip Plan");
         setSize(800, 400);
@@ -38,7 +36,7 @@ public class TripPlanView extends JFrame {
         }
 
         // Set up the table
-        tripTable = new JTable(tableModel);
+        JTable tripTable = new JTable(tableModel);
         JScrollPane scrollPane = new JScrollPane(tripTable);
 
         // Add components to the frame

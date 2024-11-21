@@ -1,5 +1,6 @@
 package model;
 
+import java.awt.*;
 import java.util.Optional;
 
 public class Route {
@@ -56,6 +57,13 @@ public class Route {
 
     public Optional<String> getRouteColor() { return routeColor; }
     public void setRouteColor(Optional<String> routeColor) { this.routeColor = routeColor; }
+
+    public Color getColor() {
+            String cString = "#" + routeColor.orElse("FFFFFF");
+            return new Color(
+            Integer.valueOf( cString.substring( 1, 3 ), 16 ),
+            Integer.valueOf( cString.substring( 3, 5 ), 16 ),
+            Integer.valueOf( cString.substring( 5, 7 ), 16 ) ); }
 
     public Optional<String> getRouteTextColor() { return routeTextColor; }
     public void setRouteTextColor(Optional<String> routeTextColor) { this.routeTextColor = routeTextColor; }
