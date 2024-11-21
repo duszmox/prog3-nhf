@@ -9,17 +9,19 @@ public class TripPlanner {
     private final List<StopTime> stopTimes;
     private final List<Pathway> pathways;
     private final List<Trip> trips;
+    private List<Route> routes;
 
     // Constructor
-    public TripPlanner(List<Stop> stops, List<StopTime> stopTimes, List<Pathway> pathways, List<Trip> trips) {
+    public TripPlanner(List<Stop> stops, List<StopTime> stopTimes, List<Pathway> pathways, List<Trip> trips, List<Route> routes) {
         this.stops = stops;
         this.stopTimes = stopTimes;
         this.pathways = pathways;
         this.trips = trips;
+        this.routes = routes;
     }
 
     // Main function to find the optimal path
-    public List<Stop> findOptimalPath(String startStopId, String endStopId, LocalDate date, LocalTime departureTime) {
+    public List<TripPlanLeg> findOptimalPath(String startStopId, String endStopId, LocalDate date, LocalTime departureTime) {
         // Step 1: Filter trips operating on the given date
         Set<String> activeTripIds = getActiveTripIds(date);
 
@@ -184,11 +186,11 @@ public class TripPlanner {
         return null;
     }
 
-    // Shortest path algorithm with transfer limit and parent station consolidation
-    private List<Stop> shortestPath(Map<String, List<Edge>> graph, String startStopId, String endStopId, LocalTime departureTime) {
+    // Shortest path algorithm with transfer limit and detailed leg information
+    private List<TripPlanLeg> shortestPath(Map<String, List<Edge>> graph, String startStopId, String endStopId, LocalTime departureTime) {
         // Priority queue to select the next node with the earliest arrival time
         PriorityQueue<NodeEntry> queue = new PriorityQueue<>(Comparator.comparingLong(ne -> ne.earliestArrivalTime));
-        queue.add(new NodeEntry(startStopId, departureTime.toSecondOfDay(), null, 0, null));
+        queue.add(new NodeEntry(startStopId, departureTime.toSecondOfDay(), null, 0, null, null));
 
         // Map to keep track of the earliest arrival times
         Map<String, Long> earliestArrivalTimes = new HashMap<>();
@@ -243,51 +245,125 @@ public class TripPlanner {
                 // Check if this is a better arrival time
                 if (arrivalTimeAtNeighbor < earliestArrivalTimes.getOrDefault(neighborStopId, Long.MAX_VALUE)) {
                     earliestArrivalTimes.put(neighborStopId, arrivalTimeAtNeighbor);
-                    NodeEntry neighborEntry = new NodeEntry(neighborStopId, arrivalTimeAtNeighbor, currentStopId, transfers, edge.tripId != null ? edge.tripId : currentTripId);
+                    NodeEntry neighborEntry = new NodeEntry(neighborStopId, arrivalTimeAtNeighbor, current, transfers, edge.tripId != null ? edge.tripId : currentTripId, edge);
                     previousNodes.put(neighborStopId, neighborEntry);
                     queue.add(neighborEntry);
                 }
             }
         }
 
-        // Reconstruct the path with parent station consolidation
-        List<String> pathStopIds = new LinkedList<>();
-        String currentStopId = endStopId;
+        // Reconstruct the path with detailed leg information
+        List<TripPlanLeg> tripPlan = new ArrayList<>();
+        NodeEntry currentNode = previousNodes.get(endStopId);
 
-        if (!previousNodes.containsKey(endStopId)) {
+        if (currentNode == null) {
             // No path found
             System.out.println("No available path found.");
             return new ArrayList<>();
         }
 
-        while (currentStopId != null) {
-            pathStopIds.addFirst(currentStopId);
-            NodeEntry nodeEntry = previousNodes.get(currentStopId);
-            currentStopId = nodeEntry != null ? nodeEntry.previousStopId : null;
-        }
-
-        // Map to get Stop objects by stop ID
+// Map to get Stop objects by stop ID
         Map<String, Stop> stopMap = new HashMap<>();
         for (Stop stop : stops) {
             stopMap.put(stop.getStopId(), stop);
         }
 
-        // Build the final path with parent station consolidation
-        List<Stop> consolidatedPath = new ArrayList<>();
-        String previousParentStationId = null;
+// Map to get Trip objects by trip ID
+        Map<String, Trip> tripMap = new HashMap<>();
+        for (Trip trip : trips) {
+            tripMap.put(trip.getTripId(), trip);
+        }
 
-        for (String stopId : pathStopIds) {
-            Stop stop = stopMap.get(stopId);
-            String parentStationId = stop.getParentStation().orElse(stop.getStopId()); // Use stop ID if no parent
+// Map to get Route objects by route ID
+        Map<String, Route> routeMap = new HashMap<>();
+        for (Route route : routes) {
+            routeMap.put(route.getRouteId(), route);
+        }
 
-            if (!parentStationId.equals(previousParentStationId)) {
-                Stop parentStop = stopMap.getOrDefault(parentStationId, stop);
-                consolidatedPath.add(parentStop);
-                previousParentStationId = parentStationId;
+// Reconstruct the path in reverse order
+        while (currentNode.previousNode != null) {
+            NodeEntry prevNode = currentNode.previousNode;
+            Edge edge = currentNode.edge;
+
+            Stop fromStop = stopMap.get(prevNode.stopId);
+            Stop toStop = stopMap.get(currentNode.stopId);
+
+            LocalTime startTime = LocalTime.ofSecondOfDay(prevNode.earliestArrivalTime % 86400);
+            LocalTime endTime = LocalTime.ofSecondOfDay(currentNode.earliestArrivalTime % 86400);
+
+            EdgeType mode = edge.type;
+            String tripId = edge.tripId;
+            String routeId = null;
+            String routeShortName = null;
+            String routeLongName = null;
+
+            // Get route information from trip ID
+            if (tripId != null) {
+                Trip trip = tripMap.get(tripId);
+                if (trip != null) {
+                    routeId = trip.getRouteId();
+                    Route route = routeMap.get(routeId);
+                    if (route != null) {
+                        routeShortName = route.getRouteShortName();
+                        routeLongName = route.getRouteLongName().orElse("");
+                    }
+                }
+            }
+
+            long transferTime = 0;
+            double distance = 0.0;
+
+            if (mode == EdgeType.WALK || mode == EdgeType.PATHWAY) {
+                // Calculate distance for walking legs
+                distance = haversine(
+                        fromStop.getStopLat(), fromStop.getStopLon(),
+                        toStop.getStopLat(), toStop.getStopLon()
+                );
+            }
+
+            TripPlanLeg leg = new TripPlanLeg(
+                    mode,
+                    fromStop,
+                    toStop,
+                    startTime,
+                    endTime,
+                    tripId,
+                    routeId,
+                    routeShortName,
+                    routeLongName,
+                    transferTime,
+                    distance
+            );
+
+            tripPlan.addFirst(leg); // Add to the beginning since we're reconstructing in reverse
+            currentNode = prevNode;
+        }
+
+        // Optionally, calculate transfer times between legs
+        for (int i = 1; i < tripPlan.size(); i++) {
+            TripPlanLeg previousLeg = tripPlan.get(i - 1);
+            TripPlanLeg currentLeg = tripPlan.get(i);
+            if (previousLeg.getTripId() == null || currentLeg.getTripId() == null) {
+                continue;
+            }
+            if (!previousLeg.getTripId().equals(currentLeg.getTripId())) {
+                // Transfer occurred
+                long transferTimeInSeconds = Duration.between(previousLeg.getEndTime(), currentLeg.getStartTime()).getSeconds();
+                currentLeg.setTransferTime(transferTimeInSeconds);
             }
         }
 
-        return consolidatedPath;
+        return tripPlan;
+    }
+
+    // Helper function to get Trip by ID
+    private Trip getTripById(String tripId) {
+        for (Trip trip : trips) {
+            if (trip.getTripId().equals(tripId)) {
+                return trip;
+            }
+        }
+        return null;
     }
 
 
@@ -309,27 +385,22 @@ public class TripPlanner {
     }
 
     // Node entry for the priority queue
-    private static class NodeEntry {
+    private class NodeEntry {
         String stopId;
         long earliestArrivalTime; // in seconds from midnight
-        String previousStopId;
+        NodeEntry previousNode;
         int transfers;
         String tripId;
+        Edge edge;
 
-        NodeEntry(String stopId, long earliestArrivalTime, String previousStopId, int transfers, String tripId) {
+        NodeEntry(String stopId, long earliestArrivalTime, NodeEntry previousNode, int transfers, String tripId, Edge edge) {
             this.stopId = stopId;
             this.earliestArrivalTime = earliestArrivalTime;
-            this.previousStopId = previousStopId;
+            this.previousNode = previousNode;
             this.transfers = transfers;
             this.tripId = tripId;
+            this.edge = edge;
         }
-    }
-
-    // Enum to represent edge types
-    private enum EdgeType {
-        TRANSIT,
-        WALK,
-        PATHWAY
     }
 
     // Haversine formula to calculate the distance between two points
