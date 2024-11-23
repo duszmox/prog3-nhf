@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class TripPlanner {
 
@@ -11,7 +12,7 @@ public class TripPlanner {
     private final List<StopTime> stopTimes;
     private final List<Pathway> pathways;
     private final List<Trip> trips;
-    private List<Route> routes;
+    private final List<Route> routes;
 
     // Constructor
     public TripPlanner(List<Stop> stops, List<StopTime> stopTimes, List<Pathway> pathways, List<Trip> trips, List<Route> routes) {
@@ -67,22 +68,20 @@ public class TripPlanner {
         return filteredStopTimes;
     }
 
-    // Function to build the graph
     private Map<String, List<Edge>> buildGraph(List<StopTime> filteredStopTimes, String startStopId, String endStopId) {
-        Map<String, List<Edge>> graph = new HashMap<>();
+
+        Map<String, List<Edge>> graph = Collections.synchronizedMap(new HashMap<>());
 
         // Initialize graph nodes
-        for (Stop stop : stops) {
-            graph.put(stop.getStopId(), new ArrayList<>());
-        }
+        stops.parallelStream().forEach(stop -> graph.put(stop.getStopId(), Collections.synchronizedList(new ArrayList<>())));
 
         // Build edges from stop times (scheduled transit)
         Map<String, List<StopTime>> stopTimesByTrip = new HashMap<>();
-        for (StopTime stopTime : filteredStopTimes) {
-            stopTimesByTrip.computeIfAbsent(stopTime.getTripId(), _ -> new ArrayList<>()).add(stopTime);
-        }
+        filteredStopTimes.forEach(stopTime ->
+                stopTimesByTrip.computeIfAbsent(stopTime.getTripId(), _ -> new ArrayList<>()).add(stopTime)
+        );
 
-        for (List<StopTime> tripStopTimes : stopTimesByTrip.values()) {
+        stopTimesByTrip.values().parallelStream().forEach(tripStopTimes -> {
             tripStopTimes.sort(Comparator.comparingInt(StopTime::getStopSequence));
             for (int i = 0; i < tripStopTimes.size() - 1; i++) {
                 StopTime currentStopTime = tripStopTimes.get(i);
@@ -103,14 +102,14 @@ public class TripPlanner {
                     graph.get(fromStopId).add(edge);
                 }
             }
-        }
+        });
 
         // Build walking edges between stops within 500 meters of start and end stops
         Set<String> relevantStopIds = getRelevantStopIds(startStopId, endStopId);
 
-        for (String stopIdA : relevantStopIds) {
+        relevantStopIds.parallelStream().forEach(stopIdA -> {
             Stop stopA = getStopById(stopIdA);
-            for (String stopIdB : relevantStopIds) {
+            relevantStopIds.parallelStream().forEach(stopIdB -> {
                 if (!stopIdA.equals(stopIdB)) {
                     Stop stopB = getStopById(stopIdB);
                     assert stopA != null;
@@ -119,18 +118,18 @@ public class TripPlanner {
                             stopA.getStopLat(), stopA.getStopLon(),
                             stopB.getStopLat(), stopB.getStopLon()
                     );
-                    if (distance <= 3000) {
+                    if (distance <= 1000) {
                         // Estimate walking time (average speed 5 km/h)
-                        long walkingTime = (long) (((distance / 1000) / 5 * 3600) + 0.5);
+                        long walkingTime = (long) (((distance / 1000) / 5 * 3600));
                         Edge edge = new Edge(stopIdB, walkingTime, EdgeType.WALK, null, null);
                         graph.get(stopIdA).add(edge);
                     }
                 }
-            }
-        }
+            });
+        });
 
         // Add pathway edges
-        for (Pathway pathway : pathways) {
+        pathways.parallelStream().forEach(pathway -> {
             String fromStopId = pathway.getFromStopId();
             String toStopId = pathway.getToStopId();
             long traversalTime = pathway.getTraversalTime().orElse(0);
@@ -144,12 +143,12 @@ public class TripPlanner {
                 Edge reverseEdge = new Edge(fromStopId, traversalTime, EdgeType.PATHWAY, null, null);
                 graph.get(toStopId).add(reverseEdge);
             }
-        }
+        });
 
         return graph;
     }
 
-    // Function to get relevant stop IDs (stops within 500 meters of start and end stops)
+    // Function to get relevant stop IDs (stops within 3 kilometers of start and end stops)
     private Set<String> getRelevantStopIds(String startStopId, String endStopId) {
         Set<String> relevantStopIds = new HashSet<>();
         relevantStopIds.add(startStopId);
@@ -157,20 +156,20 @@ public class TripPlanner {
 
         Stop startStop = getStopById(startStopId);
         Stop endStop = getStopById(endStopId);
+        assert startStop != null;
+        assert endStop != null;
+        double distance = haversine(
+                startStop.getStopLat(), startStop.getStopLon(),
+                endStop.getStopLat(), endStop.getStopLon()
+        );
+
 
         for (Stop stop : stops) {
             if (!stop.getStopId().equals(startStopId) && !stop.getStopId().equals(endStopId)) {
-                assert startStop != null;
-                double distanceToStart = haversine(
-                        startStop.getStopLat(), startStop.getStopLon(),
-                        stop.getStopLat(), stop.getStopLon()
-                );
-                assert endStop != null;
-                double distanceToEnd = haversine(
-                        endStop.getStopLat(), endStop.getStopLon(),
-                        stop.getStopLat(), stop.getStopLon()
-                );
-                if (distanceToStart <= 3000 || distanceToEnd <= 3000) {
+                double distanceFromCenter = haversine(
+                        (startStop.getStopLat() + endStop.getStopLat())/2, (startStop.getStopLon() + endStop.getStopLon())/2, stop.getStopLat(), stop.getStopLon()
+                ) - 1000;
+                if (distanceFromCenter <= distance) {
                     relevantStopIds.add(stop.getStopId());
                 }
             }
@@ -190,80 +189,80 @@ public class TripPlanner {
 
     // Shortest path algorithm with transfer limit and detailed leg information
     private List<TripPlanLeg> shortestPath(Map<String, List<Edge>> graph, String startStopId, String endStopId, LocalTime departureTime) {
+        // Priority queue for exploring nodes
         PriorityQueue<NodeEntry> queue = new PriorityQueue<>(Comparator.comparingLong(ne -> ne.earliestArrivalTime));
         queue.add(new NodeEntry(startStopId, departureTime.toSecondOfDay(), null, 0, null, null));
 
-        Map<String, Long> earliestArrivalTimes = new HashMap<>();
+        // Maps to track earliest arrival times and paths
+        Map<String, Long> earliestArrivalTimes = Collections.synchronizedMap(new HashMap<>());
         earliestArrivalTimes.put(startStopId, (long) departureTime.toSecondOfDay());
 
-        Map<String, NodeEntry> previousNodes = new HashMap<>();
+        Map<String, NodeEntry> previousNodes = Collections.synchronizedMap(new HashMap<>());
 
+        // Main loop to explore the graph
         while (!queue.isEmpty()) {
             NodeEntry current = queue.poll();
             String currentStopId = current.stopId;
 
             if (currentStopId.equals(endStopId)) {
-                break;
+                break; // Stop once we reach the destination
             }
 
-            for (Edge edge : graph.getOrDefault(currentStopId, new ArrayList<>())) {
+            // Process neighbors in parallel
+            List<Edge> neighbors = graph.getOrDefault(currentStopId, Collections.emptyList());
+            neighbors.parallelStream().forEach(edge -> {
                 String neighborStopId = edge.toStopId;
                 long arrivalTimeAtNeighbor;
                 int transfers = current.transfers;
                 String currentTripId = current.tripId;
 
+                // Calculate arrival time based on edge type
                 if (edge.type == EdgeType.TRANSIT) {
                     if (edge.departureTime != null && edge.departureTime.toSecondOfDay() >= current.earliestArrivalTime) {
                         arrivalTimeAtNeighbor = edge.departureTime.toSecondOfDay() + edge.travelTime;
 
                         if (currentTripId == null || !currentTripId.equals(edge.tripId)) {
-                            transfers += 1;
+                            transfers += 1; // Increment transfers for a trip change
                         }
 
                         if (transfers > 4) {
-                            continue;
+                            return; // Skip paths exceeding transfer limit
                         }
                     } else {
-                        continue;
+                        return; // Skip edges with invalid departure times
                     }
                 } else {
                     arrivalTimeAtNeighbor = current.earliestArrivalTime + edge.travelTime;
                     if (currentTripId != null) {
-                        transfers += 1;
+                        transfers += 1; // Increment transfers for walking or pathway edges
                         currentTripId = null;
                     }
                 }
 
-                if (arrivalTimeAtNeighbor < earliestArrivalTimes.getOrDefault(neighborStopId, Long.MAX_VALUE)) {
-                    earliestArrivalTimes.put(neighborStopId, arrivalTimeAtNeighbor);
-                    NodeEntry neighborEntry = new NodeEntry(neighborStopId, arrivalTimeAtNeighbor, current, transfers, edge.tripId != null ? edge.tripId : currentTripId, edge);
-                    previousNodes.put(neighborStopId, neighborEntry);
-                    queue.add(neighborEntry);
+                // Update the earliest arrival time if we find a better path
+                synchronized (earliestArrivalTimes) {
+                    if (arrivalTimeAtNeighbor < earliestArrivalTimes.getOrDefault(neighborStopId, Long.MAX_VALUE)) {
+                        earliestArrivalTimes.put(neighborStopId, arrivalTimeAtNeighbor);
+                        NodeEntry neighborEntry = new NodeEntry(neighborStopId, arrivalTimeAtNeighbor, current, transfers,
+                                edge.tripId != null ? edge.tripId : currentTripId, edge);
+                        synchronized (previousNodes) {
+                            previousNodes.put(neighborStopId, neighborEntry);
+                        }
+                        synchronized (queue) {
+                            queue.add(neighborEntry);
+                        }
+                    }
                 }
-            }
+            });
         }
 
+        // Reconstruct the path
         List<TripPlanLeg> tripPlan = new ArrayList<>();
         NodeEntry currentNode = previousNodes.get(endStopId);
 
         if (currentNode == null) {
             System.out.println("No available path found.");
             return new ArrayList<>();
-        }
-
-        Map<String, Stop> stopMap = new HashMap<>();
-        for (Stop stop : stops) {
-            stopMap.put(stop.getStopId(), stop);
-        }
-
-        Map<String, Trip> tripMap = new HashMap<>();
-        for (Trip trip : trips) {
-            tripMap.put(trip.getTripId(), trip);
-        }
-
-        Map<String, Route> routeMap = new HashMap<>();
-        for (Route route : routes) {
-            routeMap.put(route.getRouteId(), route);
         }
 
         // Reconstruct the path in reverse order
@@ -274,13 +273,22 @@ public class TripPlanner {
         }
         Collections.reverse(pathNodes);
 
-        // Build trip plan with transfers
+        // Generate trip plan from the path
+        buildTripPlanFromPath(pathNodes, tripPlan);
+
+        return tripPlan;
+    }
+
+    // Helper function to build the trip plan from path nodes
+    private void buildTripPlanFromPath(List<NodeEntry> pathNodes, List<TripPlanLeg> tripPlan) {
+        Map<String, Stop> stopMap = stops.parallelStream().collect(Collectors.toConcurrentMap(Stop::getStopId, stop -> stop));
+        Map<String, Trip> tripMap = trips.parallelStream().collect(Collectors.toConcurrentMap(Trip::getTripId, trip -> trip));
+        Map<String, Route> routeMap = routes.parallelStream().collect(Collectors.toConcurrentMap(Route::getRouteId, route -> route));
+
         String previousTripId = null;
         LocalTime previousArrivalTime = null;
-        Stop previousStop = null;
 
-        for (int i = 0; i < pathNodes.size(); i++) {
-            NodeEntry node = pathNodes.get(i);
+        for (NodeEntry node : pathNodes) {
             NodeEntry prevNode = node.previousNode;
             Edge edge = node.edge;
 
@@ -315,47 +323,31 @@ public class TripPlanner {
                         toStop.getStopLat(), toStop.getStopLon()
                 );
             } else {
-                legType = TripPlanLeg.LegType.WALK; // Default to WALK for any other types
+                legType = TripPlanLeg.LegType.WALK; // Default to WALK for other types
             }
 
-            // Check for transfer
             if (previousTripId != null && tripId != null && !previousTripId.equals(tripId)) {
-                // Insert transfer leg
-                TripPlanLeg transferLeg = new TripPlanLeg(
-                        TripPlanLeg.LegType.TRANSFER,
-                        fromStop,
-                        previousArrivalTime,
-                        startTime
-                );
-                tripPlan.add(transferLeg);
-
+                // Add transfer leg
+                tripPlan.add(new TripPlanLeg(TripPlanLeg.LegType.TRANSFER, fromStop, previousArrivalTime, startTime));
             }
 
-            // Only add transfer if the next leg is a transit leg
-            if (legType == TripPlanLeg.LegType.TRANSIT || legType == TripPlanLeg.LegType.WALK) {
-                TripPlanLeg leg = new TripPlanLeg(
-                        legType,
-                        fromStop,
-                        toStop,
-                        startTime,
-                        endTime,
-                        tripId,
-                        routeId,
-                        routeShortName,
-                        routeLongName,
-                        distance
-                );
-                tripPlan.add(leg);
-            }
+            tripPlan.add(new TripPlanLeg(
+                    legType,
+                    fromStop,
+                    toStop,
+                    startTime,
+                    endTime,
+                    tripId,
+                    routeId,
+                    routeShortName,
+                    routeLongName,
+                    distance
+            ));
 
             previousTripId = tripId;
             previousArrivalTime = endTime;
-            previousStop = toStop;
         }
-
-        return tripPlan;
     }
-
 
     // Helper function to get model.Trip by ID
     private Trip getTripById(String tripId) {
