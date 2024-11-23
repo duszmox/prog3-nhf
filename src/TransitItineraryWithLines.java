@@ -105,13 +105,17 @@ public class TransitItineraryWithLines extends JFrame {
         if (leg.getLegType() == TripPlanLeg.LegType.TRANSIT) {
             transport = leg.getRouteShortName() + " " + getTransportModeName(leg.getRouteId());
             long durationMinutes = leg.getDuration()/60;
-            details = durationMinutes + " min";
+            details = durationMinutes + " min " + leg.getTripId();
         } else if (leg.getLegType() == TripPlanLeg.LegType.WALK) {
             transport = "Walking";
             long durationMinutes = leg.getDuration()/60;
             details = durationMinutes + " min, " + String.format("%.0f m", leg.getDistance());
         } else if (leg.getLegType() == TripPlanLeg.LegType.TRANSFER) {
             transport = "Transfer";
+            long durationMinutes = leg.getDuration()/60;
+            details = durationMinutes + " min wait";
+        } else if (leg.getLegType() == TripPlanLeg.LegType.WAIT) {
+            transport = "Wait";
             long durationMinutes = leg.getDuration()/60;
             details = durationMinutes + " min wait";
         }
@@ -218,6 +222,7 @@ public class TransitItineraryWithLines extends JFrame {
                     g2.setStroke(new BasicStroke(3, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, dashPattern, 0));
                     g2.setColor(Color.GRAY);
                 } else if (leg.getLegType() == TripPlanLeg.LegType.TRANSIT) {
+                    g2.setStroke(new BasicStroke(3));
                     if (routeMap != null && routeMap.containsKey(leg.getRouteId())) {
                         g2.setColor(routeMap.get(leg.getRouteId()).getColor());
                     } else {
@@ -228,6 +233,12 @@ public class TransitItineraryWithLines extends JFrame {
                     float[] dashPattern = {10, 10};
                     g2.setStroke(new BasicStroke(3, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, dashPattern, 0));
                     g2.setColor(Color.ORANGE);
+                }
+                else if (leg.getLegType() == TripPlanLeg.LegType.WAIT) {
+                    // Dashed line for transfer
+                    float[] dashPattern = {10, 10};
+                    g2.setStroke(new BasicStroke(3, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, dashPattern, 0));
+                    g2.setColor(Color.blue);
                 }
             } else {
                 // Default line for final stop

@@ -15,6 +15,7 @@ public class TripPlanLeg {
     private String routeLongName;     // Long name of the route
     private double distance;          // Distance in meters for walking legs
     private long duration;            // Duration of the leg in seconds (for transfers)
+    private long waitTime;
 
     // Constructor for TRANSIT and WALK legs
     public TripPlanLeg(LegType legType, Stop fromStop, Stop toStop, LocalTime startTime, LocalTime endTime,
@@ -128,6 +129,7 @@ public class TripPlanLeg {
     public enum LegType {
         TRANSIT,
         WALK,
-        TRANSFER
+        TRANSFER,
+        WAIT
     }
 }
