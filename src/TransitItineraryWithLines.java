@@ -104,15 +104,15 @@ public class TransitItineraryWithLines extends JFrame {
 
         if (leg.getLegType() == TripPlanLeg.LegType.TRANSIT) {
             transport = leg.getRouteShortName() + " " + getTransportModeName(leg.getRouteId());
-            long durationMinutes = Duration.between(leg.getStartTime(), leg.getEndTime()).toMinutes();
+            long durationMinutes = leg.getDuration()/60;
             details = durationMinutes + " min";
         } else if (leg.getLegType() == TripPlanLeg.LegType.WALK) {
             transport = "Walking";
-            long durationMinutes = Duration.between(leg.getStartTime(), leg.getEndTime()).toMinutes();
+            long durationMinutes = leg.getDuration()/60;
             details = durationMinutes + " min, " + String.format("%.0f m", leg.getDistance());
         } else if (leg.getLegType() == TripPlanLeg.LegType.TRANSFER) {
             transport = "Transfer";
-            long durationMinutes = Duration.between(leg.getStartTime(), leg.getEndTime()).toMinutes();
+            long durationMinutes = leg.getDuration()/60;
             details = durationMinutes + " min wait";
         }
 

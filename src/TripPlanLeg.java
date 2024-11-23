@@ -18,7 +18,7 @@ public class TripPlanLeg {
 
     // Constructor for TRANSIT and WALK legs
     public TripPlanLeg(LegType legType, Stop fromStop, Stop toStop, LocalTime startTime, LocalTime endTime,
-                       String tripId, String routeId, String routeShortName, String routeLongName, double distance) {
+                       String tripId, String routeId, String routeShortName, String routeLongName, double distance, long duration) {
         this.legType = legType;
         this.fromStop = fromStop;
         this.toStop = toStop;
@@ -29,17 +29,18 @@ public class TripPlanLeg {
         this.routeShortName = routeShortName;
         this.routeLongName = routeLongName;
         this.distance = distance;
-        this.duration = Duration.between(startTime, endTime).getSeconds();
+        this.duration = duration;
     }
 
     // Constructor for TRANSFER legs
-    public TripPlanLeg(LegType legType, Stop transferStop, LocalTime startTime, LocalTime endTime) {
+    public TripPlanLeg(LegType legType, Stop transferStop, LocalTime startTime, LocalTime endTime, long duration) {
         this.legType = legType;
         this.fromStop = transferStop;
         this.toStop = transferStop;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.duration = Duration.between(startTime, endTime).getSeconds();
+        this.duration = duration;
+
     }
 
     // Getters and Setters
@@ -61,6 +62,14 @@ public class TripPlanLeg {
 
     public void setToStop(Stop toStop) {
         this.toStop = toStop;
+    }
+
+    public long getDuration() {
+        return duration;
+    }
+
+    public void setDuration(long duration) {
+        this.duration = duration;
     }
 
     public LocalTime getStartTime() {

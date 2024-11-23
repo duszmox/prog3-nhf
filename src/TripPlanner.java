@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class TripPlanner {
@@ -118,7 +119,7 @@ public class TripPlanner {
                             stopA.getStopLat(), stopA.getStopLon(),
                             stopB.getStopLat(), stopB.getStopLon()
                     );
-                    if (distance <= 1000) {
+                    if (distance <= 3000) {
                         // Estimate walking time (average speed 5 km/h)
                         long walkingTime = (long) (((distance / 1000) / 5 * 3600));
                         Edge edge = new Edge(stopIdB, walkingTime, EdgeType.WALK, null, null);
@@ -150,7 +151,7 @@ public class TripPlanner {
 
     // Function to get relevant stop IDs (stops within 3 kilometers of start and end stops)
     private Set<String> getRelevantStopIds(String startStopId, String endStopId) {
-        Set<String> relevantStopIds = new HashSet<>();
+        Set<String> relevantStopIds = ConcurrentHashMap.newKeySet(); // Thread-safe set for parallel operations
         relevantStopIds.add(startStopId);
         relevantStopIds.add(endStopId);
 
@@ -158,22 +159,24 @@ public class TripPlanner {
         Stop endStop = getStopById(endStopId);
         assert startStop != null;
         assert endStop != null;
+
         double distance = haversine(
                 startStop.getStopLat(), startStop.getStopLon(),
                 endStop.getStopLat(), endStop.getStopLon()
         );
 
+        double centerLat = (startStop.getStopLat() + endStop.getStopLat()) / 2;
+        double centerLon = (startStop.getStopLon() + endStop.getStopLon()) / 2;
 
-        for (Stop stop : stops) {
-            if (!stop.getStopId().equals(startStopId) && !stop.getStopId().equals(endStopId)) {
-                double distanceFromCenter = haversine(
-                        (startStop.getStopLat() + endStop.getStopLat())/2, (startStop.getStopLon() + endStop.getStopLon())/2, stop.getStopLat(), stop.getStopLon()
-                ) - 1000;
-                if (distanceFromCenter <= distance) {
-                    relevantStopIds.add(stop.getStopId());
-                }
-            }
-        }
+        stops.parallelStream()
+                .filter(stop -> !stop.getStopId().equals(startStopId) && !stop.getStopId().equals(endStopId))
+                .forEach(stop -> {
+                    double distanceFromCenter = haversine(centerLat, centerLon, stop.getStopLat(), stop.getStopLon()) - 1000;
+                    if (distanceFromCenter <= distance) {
+                        relevantStopIds.add(stop.getStopId());
+                    }
+                });
+
         return relevantStopIds;
     }
 
@@ -189,71 +192,69 @@ public class TripPlanner {
 
     // Shortest path algorithm with transfer limit and detailed leg information
     private List<TripPlanLeg> shortestPath(Map<String, List<Edge>> graph, String startStopId, String endStopId, LocalTime departureTime) {
-        // Priority queue for exploring nodes
         PriorityQueue<NodeEntry> queue = new PriorityQueue<>(Comparator.comparingLong(ne -> ne.earliestArrivalTime));
         queue.add(new NodeEntry(startStopId, departureTime.toSecondOfDay(), null, 0, null, null));
 
-        // Maps to track earliest arrival times and paths
-        Map<String, Long> earliestArrivalTimes = Collections.synchronizedMap(new HashMap<>());
+        Map<String, Long> earliestArrivalTimes = new HashMap<>();
         earliestArrivalTimes.put(startStopId, (long) departureTime.toSecondOfDay());
 
-        Map<String, NodeEntry> previousNodes = Collections.synchronizedMap(new HashMap<>());
+        Map<String, NodeEntry> previousNodes = new HashMap<>();
 
-        // Main loop to explore the graph
         while (!queue.isEmpty()) {
             NodeEntry current = queue.poll();
             String currentStopId = current.stopId;
 
             if (currentStopId.equals(endStopId)) {
-                break; // Stop once we reach the destination
+                break;
             }
 
-            // Process neighbors in parallel
-            List<Edge> neighbors = graph.getOrDefault(currentStopId, Collections.emptyList());
-            neighbors.parallelStream().forEach(edge -> {
+            for (Edge edge : graph.getOrDefault(currentStopId, new ArrayList<>())) {
                 String neighborStopId = edge.toStopId;
                 long arrivalTimeAtNeighbor;
                 int transfers = current.transfers;
                 String currentTripId = current.tripId;
 
-                // Calculate arrival time based on edge type
                 if (edge.type == EdgeType.TRANSIT) {
                     if (edge.departureTime != null && edge.departureTime.toSecondOfDay() >= current.earliestArrivalTime) {
-                        arrivalTimeAtNeighbor = edge.departureTime.toSecondOfDay() + edge.travelTime;
+                        long waitTime = edge.departureTime.toSecondOfDay() - current.earliestArrivalTime;
+                        boolean sameTrip = currentTripId != null && currentTripId.equals(edge.tripId);
 
-                        if (currentTripId == null || !currentTripId.equals(edge.tripId)) {
-                            transfers += 1; // Increment transfers for a trip change
+                        if (sameTrip) {
+                            // Continue on the same trip without transfer
+                            arrivalTimeAtNeighbor = edge.departureTime.toSecondOfDay() + edge.travelTime;
+                        } else {
+                            // Enforce transfer time constraints
+                            if (waitTime >= 60 && waitTime <= 1200) { // Between 1 and 20 minutes
+                                arrivalTimeAtNeighbor = edge.departureTime.toSecondOfDay() + edge.travelTime;
+                                transfers += 1;
+                                currentTripId = edge.tripId;
+                            } else {
+                                continue; // Cannot make this transfer
+                            }
                         }
 
                         if (transfers > 4) {
-                            return; // Skip paths exceeding transfer limit
+                            continue; // Exceeds transfer limit
                         }
                     } else {
-                        return; // Skip edges with invalid departure times
+                        continue; // Invalid departure time
                     }
                 } else {
+                    // For WALK and PATHWAY edges
                     arrivalTimeAtNeighbor = current.earliestArrivalTime + edge.travelTime;
                     if (currentTripId != null) {
-                        transfers += 1; // Increment transfers for walking or pathway edges
+                        transfers += 1;
                         currentTripId = null;
                     }
                 }
 
-                // Update the earliest arrival time if we find a better path
-                synchronized (earliestArrivalTimes) {
-                    if (arrivalTimeAtNeighbor < earliestArrivalTimes.getOrDefault(neighborStopId, Long.MAX_VALUE)) {
-                        earliestArrivalTimes.put(neighborStopId, arrivalTimeAtNeighbor);
-                        NodeEntry neighborEntry = new NodeEntry(neighborStopId, arrivalTimeAtNeighbor, current, transfers,
-                                edge.tripId != null ? edge.tripId : currentTripId, edge);
-                        synchronized (previousNodes) {
-                            previousNodes.put(neighborStopId, neighborEntry);
-                        }
-                        synchronized (queue) {
-                            queue.add(neighborEntry);
-                        }
-                    }
+                if (arrivalTimeAtNeighbor < earliestArrivalTimes.getOrDefault(neighborStopId, Long.MAX_VALUE)) {
+                    earliestArrivalTimes.put(neighborStopId, arrivalTimeAtNeighbor);
+                    NodeEntry neighborEntry = new NodeEntry(neighborStopId, arrivalTimeAtNeighbor, current, transfers, currentTripId, edge);
+                    previousNodes.put(neighborStopId, neighborEntry);
+                    queue.add(neighborEntry);
                 }
-            });
+            }
         }
 
         // Reconstruct the path
@@ -304,6 +305,7 @@ public class TripPlanner {
             String routeShortName = null;
             String routeLongName = null;
             double distance = 0.0;
+            long duration = edge.travelTime;
 
             if (edge.type == EdgeType.TRANSIT) {
                 legType = TripPlanLeg.LegType.TRANSIT;
@@ -326,9 +328,19 @@ public class TripPlanner {
                 legType = TripPlanLeg.LegType.WALK; // Default to WALK for other types
             }
 
+            // Add transfer leg if transitioning to a transit leg and trip IDs are different
             if (previousTripId != null && tripId != null && !previousTripId.equals(tripId)) {
-                // Add transfer leg
-                tripPlan.add(new TripPlanLeg(TripPlanLeg.LegType.TRANSFER, fromStop, previousArrivalTime, startTime));
+                long transferDuration = Duration.between(previousArrivalTime, startTime).getSeconds();
+                if (duration < transferDuration) {
+                    TripPlanLeg transferLeg = new TripPlanLeg(
+                            TripPlanLeg.LegType.TRANSFER,
+                            fromStop,
+                            previousArrivalTime,
+                            startTime,
+                            transferDuration - duration
+                    );
+                    tripPlan.add(transferLeg);
+                }
             }
 
             tripPlan.add(new TripPlanLeg(
@@ -341,7 +353,8 @@ public class TripPlanner {
                     routeId,
                     routeShortName,
                     routeLongName,
-                    distance
+                    distance,
+                    edge.travelTime
             ));
 
             previousTripId = tripId;
