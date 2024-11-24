@@ -1,6 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
-import java.time.Duration;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,26 @@ public class TransitItineraryWithLines extends JFrame {
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(Color.WHITE);
 
+        // Create a panel for the back button at the top
+        JPanel backButtonPanel = new JPanel();
+        backButtonPanel.setLayout(new BoxLayout(backButtonPanel, BoxLayout.X_AXIS));
+        backButtonPanel.setBackground(Color.WHITE);
+        backButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+
+        // Add back button at the top left
+        JButton backButton = new JButton("Back");
+        backButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        backButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dispose(); // Close the window
+            }
+        });
+        backButtonPanel.add(Box.createVerticalGlue());
+        backButtonPanel.add(backButton);
+
+        mainPanel.add(backButtonPanel);
+
         // Define fixed widths for Time and Line sections
         int timeWidth = 60;
         int lineWidth = 30; // Fixed width for the line component
@@ -27,11 +48,10 @@ public class TransitItineraryWithLines extends JFrame {
         // Loop through the tripPlan and add itinerary items
         for (int i = 0; i < tripPlan.size(); i++) {
             TripPlanLeg leg = tripPlan.get(i);
-            boolean isLastLeg = (i == tripPlan.size());
             boolean isFirstLeg = (i == 0);
 
             // Create the panel for the leg
-            JPanel legPanel = createStopPanel(leg, isFirstLeg, isLastLeg, timeWidth, lineWidth, spacerWidth);
+            JPanel legPanel = createStopPanel(leg, isFirstLeg, timeWidth, lineWidth, spacerWidth);
             mainPanel.add(legPanel);
         }
 
@@ -40,6 +60,8 @@ public class TransitItineraryWithLines extends JFrame {
         JPanel finalStopPanel = createFinalStopPanel(lastLeg, timeWidth, lineWidth, spacerWidth);
         mainPanel.add(finalStopPanel);
 
+        mainPanel.add(backButtonPanel);
+
         JScrollPane scrollPane = new JScrollPane(mainPanel);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         add(scrollPane);
@@ -47,7 +69,7 @@ public class TransitItineraryWithLines extends JFrame {
         setVisible(true);
     }
 
-    private JPanel createStopPanel(TripPlanLeg leg, boolean isFirstLeg, boolean isLastLeg,
+    private JPanel createStopPanel(TripPlanLeg leg, boolean isFirstLeg,
                                    int timeWidth, int lineWidth, int spacerWidth) {
         JPanel stopPanel = new JPanel();
         stopPanel.setLayout(new BoxLayout(stopPanel, BoxLayout.X_AXIS));
@@ -75,7 +97,7 @@ public class TransitItineraryWithLines extends JFrame {
         lineContainer.setPreferredSize(new Dimension(lineWidth, 50));
         lineContainer.setMaximumSize(new Dimension(lineWidth, Integer.MAX_VALUE));
 
-        LineComponent lineComponent = new LineComponent(leg, isFirstLeg, isLastLeg);
+        LineComponent lineComponent = new LineComponent(leg, isFirstLeg, false);
         lineComponent.setPreferredSize(new Dimension(lineWidth, 50));
         lineComponent.setMaximumSize(new Dimension(lineWidth, Integer.MAX_VALUE));
         lineContainer.add(lineComponent);
