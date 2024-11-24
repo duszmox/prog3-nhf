@@ -6,28 +6,50 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import model.Route; // Ensure this import matches your project structure
+import java.util.Objects;
+
+import model.Route;
 import model.Trip;
 
 public class TransitItineraryWithLines extends JFrame {
     private Map<String, Route> routeMap;
     private List<TripPlanLeg> tripPlan;
     private Map<String, Trip> tripMap;
+    private final List<TripPlanLeg> originalTripPlan;
+    List<Integer> numberOfStops  = new ArrayList<>();
+
+    private boolean expanded = false;
 
     public TransitItineraryWithLines(List<TripPlanLeg> tripPlan, Map<String, Route> routeMap, Map<String, Trip> tripMap) {
+        this.originalTripPlan = new ArrayList<>(tripPlan); // Copy original list
         this.routeMap = routeMap;
-        this.tripPlan = tripPlan;
+        this.tripPlan = new ArrayList<>(tripPlan); // Work on a modifiable list
         this.tripMap = tripMap;
         setTitle("Transit Itinerary");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(500, 600);
+        setLocationRelativeTo(null);
+
+        ImageIcon img = new ImageIcon("icon.png");
+        setIconImage(img.getImage());
 
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(Color.WHITE);
 
+        renderComponents(mainPanel);
+
+        JScrollPane scrollPane = new JScrollPane(mainPanel);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        add(scrollPane);
+
+        setVisible(true);
+    }
+
+    private void renderComponents(JPanel mainPanel) {
         // Create a panel for the back button at the top
         JPanel backButtonPanelTop = new JPanel();
         backButtonPanelTop.setLayout(new BoxLayout(backButtonPanelTop, BoxLayout.X_AXIS));
@@ -36,12 +58,23 @@ public class TransitItineraryWithLines extends JFrame {
 
         // Add back button at the top right
         JButton backButtonTop = new JButton("Back");
-        backButtonTop.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        backButtonTop.setAlignmentX(Component.LEFT_ALIGNMENT);
         backButtonTop.addActionListener(e -> {
             dispose(); // Close the window
         });
         backButtonPanelTop.add(Box.createHorizontalGlue());
         backButtonPanelTop.add(backButtonTop);
+
+        JButton expandButtonTop = new JButton(!expanded ? "Expand" : "Collapse");
+        expandButtonTop.setAlignmentX(Component.CENTER_ALIGNMENT);
+        expandButtonTop.addActionListener(e -> {
+            expanded = !expanded;
+            mainPanel.removeAll();
+            renderComponents(mainPanel);
+            mainPanel.revalidate();
+        });
+        backButtonPanelTop.add(Box.createHorizontalGlue());
+        backButtonPanelTop.add(expandButtonTop);
 
         // Add export button at the top right
         JButton exportButton = new JButton("Export to TXT");
@@ -57,18 +90,69 @@ public class TransitItineraryWithLines extends JFrame {
         int lineWidth = 30; // Fixed width for the line component
         int spacerWidth = 10; // Spacer between line and details
 
-        // Loop through the tripPlan and add itinerary items
-        for (int i = 0; i < tripPlan.size(); i++) {
-            TripPlanLeg leg = tripPlan.get(i);
-            boolean isFirstLeg = (i == 0);
+        List<TripPlanLeg> filteredTripPlanLegs = new ArrayList<>();
+        if (!expanded) {
+            // Reset tripPlan to a copy of the original list
+            tripPlan = new ArrayList<>(originalTripPlan);
+            // Filter and combine durations
 
-            // Create the panel for the leg
-            JPanel legPanel = createStopPanel(leg, isFirstLeg, timeWidth, lineWidth, spacerWidth);
-            mainPanel.add(legPanel);
+            for (TripPlanLeg tripPlanLeg : tripPlan) {
+                TripPlanLeg prevLeg = null;
+                Integer numberOfStop = 0;
+
+                if (!filteredTripPlanLegs.isEmpty()) {
+                    prevLeg = filteredTripPlanLegs.get(filteredTripPlanLegs.size() - 1);
+                    numberOfStop = numberOfStops.get(numberOfStops.size() - 1);
+                }
+
+                boolean hidable = prevLeg != null && Objects.equals(prevLeg.getTripId(), tripPlanLeg.getTripId());
+                if (hidable) {
+                    // Combine durations and distances, but create a new instance to avoid modifying the original data
+                    TripPlanLeg combinedLeg = new TripPlanLeg(prevLeg);
+                    combinedLeg.setDuration(prevLeg.getDuration() + tripPlanLeg.getDuration());
+                    combinedLeg.setDistance(prevLeg.getDistance() + tripPlanLeg.getDistance());
+
+                    // Replace the previous leg in the filtered list with the combined leg
+                    filteredTripPlanLegs.set(filteredTripPlanLegs.size() - 1, combinedLeg);
+                    numberOfStops.set(numberOfStops.size() - 1, numberOfStop + 1);
+                } else {
+                    // Add the new leg to the filtered list
+                    filteredTripPlanLegs.add(new TripPlanLeg(tripPlanLeg));
+                    numberOfStops.add(1);
+                }
+            }
+
+
+            tripPlan = filteredTripPlanLegs;
+            for (int i = 0; i < tripPlan.size(); i++) {
+                TripPlanLeg leg = tripPlan.get(i);
+                Integer nof =  numberOfStops.get(i);
+                boolean isFirstLeg = (i == 0);
+
+                // Create and add the panel for each leg
+                JPanel legPanel = createStopPanel(leg, isFirstLeg, timeWidth, lineWidth, spacerWidth, nof);
+                mainPanel.add(legPanel);
+            }
+        } else {
+            // Expanded view restores original durations
+            tripPlan = new ArrayList<>(originalTripPlan);
+            for (TripPlanLeg _ : tripPlan) {
+                numberOfStops.add(1);
+            }
+            for (int i = 0; i < originalTripPlan.size(); i++) {
+                TripPlanLeg leg = originalTripPlan.get(i);
+                Integer nof =  numberOfStops.get(i);
+                boolean isFirstLeg = (i == 0);
+
+                // Create and add the panel for each leg
+                JPanel legPanel = createStopPanel(leg, isFirstLeg, timeWidth, lineWidth, spacerWidth, nof);
+                mainPanel.add(legPanel);
+            }
         }
 
-        // Add the final destination stop
-        TripPlanLeg lastLeg = tripPlan.get(tripPlan.size() - 1);
+
+        // Render final stop
+        TripPlanLeg lastLeg = tripPlan.getLast();
         JPanel finalStopPanel = createFinalStopPanel(lastLeg, timeWidth, lineWidth, spacerWidth);
         mainPanel.add(finalStopPanel);
 
@@ -91,12 +175,6 @@ public class TransitItineraryWithLines extends JFrame {
         backButtonPanelBottom.add(backButtonBottom);
 
         mainPanel.add(backButtonPanelBottom);
-
-        JScrollPane scrollPane = new JScrollPane(mainPanel);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        add(scrollPane);
-
-        setVisible(true);
     }
 
     private void exportTripPlanToTxt() {
@@ -118,7 +196,11 @@ public class TransitItineraryWithLines extends JFrame {
                     long durationMinutes = leg.getDuration() / 60;
                     writer.write("O- " + fromStopName + " - " + startTime + "\n");
                     writer.write("|\n");
-                    writer.write("|-- (" + routeShortName + " ▶ " + toStopName + ") X stations- " + durationMinutes + " Minutes\n");
+                    writer.write("|-- (" + routeShortName + " ▶ " + toStopName + ") ");
+                    if (!expanded) {
+                        writer.write(numberOfStops.get(i) + " stations- ");
+                    }
+                    writer.write(durationMinutes + " Minutes\n");
                     writer.write("|\n");
                 } else if (leg.getLegType() == TripPlanLeg.LegType.WALK) {
                     String fromStopName = leg.getFromStop().getStopName();
@@ -149,7 +231,7 @@ public class TransitItineraryWithLines extends JFrame {
     }
 
     private JPanel createStopPanel(TripPlanLeg leg, boolean isFirstLeg,
-                                   int timeWidth, int lineWidth, int spacerWidth) {
+                                   int timeWidth, int lineWidth, int spacerWidth, int numberOfStops) {
         JPanel stopPanel = new JPanel();
         stopPanel.setLayout(new BoxLayout(stopPanel, BoxLayout.X_AXIS));
         stopPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
@@ -190,14 +272,15 @@ public class TransitItineraryWithLines extends JFrame {
         JPanel detailsPanel = new JPanel();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
         detailsPanel.setBackground(Color.WHITE);
-        detailsPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        detailsPanel.setAlignmentY(isFirstLeg ? Component.BOTTOM_ALIGNMENT : Component.TOP_ALIGNMENT);
         // Allow details panel to expand
-        detailsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        detailsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
 
         // Stop name
         String stopName = leg.getFromStop().getStopName();
         JLabel stopLabel = new JLabel(stopName);
         stopLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        stopLabel.setAlignmentY(isFirstLeg ? Component.BOTTOM_ALIGNMENT : Component.TOP_ALIGNMENT);
 
         // Transport details
         String transport = "";
@@ -206,7 +289,10 @@ public class TransitItineraryWithLines extends JFrame {
         if (leg.getLegType() == TripPlanLeg.LegType.TRANSIT) {
             transport = getTransportModeName(leg.getRouteId()) + " " + leg.getRouteShortName() ;
             long durationMinutes = leg.getDuration()/60;
-            details = durationMinutes + " min ";
+            details = durationMinutes + " min";
+            if (numberOfStops != 1) {
+                details += ", " + numberOfStops + " stops ";
+            }
         } else if (leg.getLegType() == TripPlanLeg.LegType.WALK) {
             transport = "Walking";
             long durationMinutes = leg.getDuration()/60;
@@ -282,6 +368,7 @@ public class TransitItineraryWithLines extends JFrame {
         String stopName = leg.getToStop().getStopName();
         JLabel stopLabel = new JLabel(stopName);
         stopLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        stopLabel.setAlignmentY(Component.BOTTOM_ALIGNMENT);
 
         detailsPanel.add(stopLabel);
 

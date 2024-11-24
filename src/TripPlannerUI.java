@@ -43,6 +43,10 @@ public class TripPlannerUI extends JFrame {
         setTitle("GTFS Trip Planner");
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        ImageIcon img = new ImageIcon("icon.png");
+        setIconImage(img.getImage());
 
         // Initialize components
         // If using custom autocomplete

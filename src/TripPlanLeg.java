@@ -44,6 +44,21 @@ public class TripPlanLeg {
 
     }
 
+    public TripPlanLeg(TripPlanLeg prevLeg) {
+        this.legType = prevLeg.getLegType();
+        this.fromStop = prevLeg.getFromStop();
+        this.toStop = prevLeg.getToStop();
+        this.startTime = prevLeg.getStartTime();
+        this.endTime = prevLeg.getEndTime();
+        this.tripId = prevLeg.getTripId();
+        this.routeId = prevLeg.getRouteId();
+        this.routeShortName = prevLeg.getRouteShortName();
+        this.routeLongName = prevLeg.getRouteLongName();
+        this.distance = prevLeg.getDistance();
+        this.duration = prevLeg.getDuration();
+        this.waitTime = prevLeg.getWaitTime();
+    }
+
     // Getters and Setters
 
     public Stop getFromStop() {
@@ -75,6 +90,10 @@ public class TripPlanLeg {
 
     public LocalTime getStartTime() {
         return startTime;
+    }
+
+    public long getWaitTime() {
+        return waitTime;
     }
 
     public void setStartTime(LocalTime startTime) {
