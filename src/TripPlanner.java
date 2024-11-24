@@ -76,6 +76,16 @@ public class TripPlanner {
         // Initialize graph nodes
         stops.parallelStream().forEach(stop -> graph.put(stop.getStopId(), Collections.synchronizedList(new ArrayList<>())));
 
+        addStopTimeEdges(filteredStopTimes, graph);
+
+        addWalkEdges(startStopId, endStopId, graph);
+
+        addPathWayEdges(graph);
+
+        return graph;
+    }
+
+    private static void addStopTimeEdges(List<StopTime> filteredStopTimes, Map<String, List<Edge>> graph) {
         // Build edges from stop times (scheduled transit)
         Map<String, List<StopTime>> stopTimesByTrip = new HashMap<>();
         filteredStopTimes.forEach(stopTime ->
@@ -104,7 +114,28 @@ public class TripPlanner {
                 }
             }
         });
+    }
 
+    private void addPathWayEdges(Map<String, List<Edge>> graph) {
+        // Add pathway edges
+        pathways.parallelStream().forEach(pathway -> {
+            String fromStopId = pathway.getFromStopId();
+            String toStopId = pathway.getToStopId();
+            long traversalTime = pathway.getTraversalTime().orElse(0);
+
+            // Create an edge
+            Edge edge = new Edge(toStopId, traversalTime, EdgeType.PATHWAY, null, null);
+            graph.get(fromStopId).add(edge);
+
+            // If bidirectional, add the reverse edge
+            if (pathway.getIsBidirectional() == 1) {
+                Edge reverseEdge = new Edge(fromStopId, traversalTime, EdgeType.PATHWAY, null, null);
+                graph.get(toStopId).add(reverseEdge);
+            }
+        });
+    }
+
+    private void addWalkEdges(String startStopId, String endStopId, Map<String, List<Edge>> graph) {
         // Build walking edges between stops within 500 meters of start and end stops
         Set<String> relevantStopIds = getRelevantStopIds(startStopId, endStopId);
 
@@ -128,25 +159,6 @@ public class TripPlanner {
                 }
             });
         });
-
-        // Add pathway edges
-        pathways.parallelStream().forEach(pathway -> {
-            String fromStopId = pathway.getFromStopId();
-            String toStopId = pathway.getToStopId();
-            long traversalTime = pathway.getTraversalTime().orElse(0);
-
-            // Create an edge
-            Edge edge = new Edge(toStopId, traversalTime, EdgeType.PATHWAY, null, null);
-            graph.get(fromStopId).add(edge);
-
-            // If bidirectional, add the reverse edge
-            if (pathway.getIsBidirectional() == 1) {
-                Edge reverseEdge = new Edge(fromStopId, traversalTime, EdgeType.PATHWAY, null, null);
-                graph.get(toStopId).add(reverseEdge);
-            }
-        });
-
-        return graph;
     }
 
     // Function to get relevant stop IDs (stops within 3 kilometers of start and end stops)
@@ -325,11 +337,11 @@ public class TripPlanner {
                         fromStop.getStopLat(), fromStop.getStopLon(),
                         toStop.getStopLat(), toStop.getStopLon()
                 );
-                if (previousTripPlanLeg != null && previousTripPlanLeg.getLegType() == legType) {
-                    previousTripPlanLeg.setDistance(previousTripPlanLeg.getDistance() + distance);
-                    previousTripPlanLeg.setEndTime(endTime);
-                    continue;
-                }
+//                if (previousTripPlanLeg != null && previousTripPlanLeg.getLegType() == legType) {
+//                    previousTripPlanLeg.setDistance(previousTripPlanLeg.getDistance() + distance);
+//                    previousTripPlanLeg.setEndTime(endTime);
+//                    continue;
+//                }
             } else {
                 legType = TripPlanLeg.LegType.WALK; // Default to WALK for other types
             }
