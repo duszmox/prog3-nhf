@@ -2,16 +2,24 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import model.Route; // Ensure this import matches your project structure
+import model.Trip;
 
 public class TransitItineraryWithLines extends JFrame {
     private Map<String, Route> routeMap;
+    private List<TripPlanLeg> tripPlan;
+    private Map<String, Trip> tripMap;
 
-    public TransitItineraryWithLines(List<TripPlanLeg> tripPlan, Map<String, Route> routeMap) {
+    public TransitItineraryWithLines(List<TripPlanLeg> tripPlan, Map<String, Route> routeMap, Map<String, Trip> tripMap) {
         this.routeMap = routeMap;
+        this.tripPlan = tripPlan;
+        this.tripMap = tripMap;
         setTitle("Transit Itinerary");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(500, 600);
@@ -21,24 +29,28 @@ public class TransitItineraryWithLines extends JFrame {
         mainPanel.setBackground(Color.WHITE);
 
         // Create a panel for the back button at the top
-        JPanel backButtonPanel = new JPanel();
-        backButtonPanel.setLayout(new BoxLayout(backButtonPanel, BoxLayout.X_AXIS));
-        backButtonPanel.setBackground(Color.WHITE);
-        backButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        JPanel backButtonPanelTop = new JPanel();
+        backButtonPanelTop.setLayout(new BoxLayout(backButtonPanelTop, BoxLayout.X_AXIS));
+        backButtonPanelTop.setBackground(Color.WHITE);
+        backButtonPanelTop.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
-        // Add back button at the top left
-        JButton backButton = new JButton("Back");
-        backButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        backButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dispose(); // Close the window
-            }
+        // Add back button at the top right
+        JButton backButtonTop = new JButton("Back");
+        backButtonTop.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        backButtonTop.addActionListener(e -> {
+            dispose(); // Close the window
         });
-        backButtonPanel.add(Box.createVerticalGlue());
-        backButtonPanel.add(backButton);
+        backButtonPanelTop.add(Box.createHorizontalGlue());
+        backButtonPanelTop.add(backButtonTop);
 
-        mainPanel.add(backButtonPanel);
+        // Add export button at the top right
+        JButton exportButton = new JButton("Export to TXT");
+        exportButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        exportButton.addActionListener(e -> exportTripPlanToTxt());
+        backButtonPanelTop.add(Box.createHorizontalGlue());
+        backButtonPanelTop.add(exportButton);
+
+        mainPanel.add(backButtonPanelTop);
 
         // Define fixed widths for Time and Line sections
         int timeWidth = 60;
@@ -60,13 +72,80 @@ public class TransitItineraryWithLines extends JFrame {
         JPanel finalStopPanel = createFinalStopPanel(lastLeg, timeWidth, lineWidth, spacerWidth);
         mainPanel.add(finalStopPanel);
 
-        mainPanel.add(backButtonPanel);
+        // Create a panel for the back button at the bottom
+        JPanel backButtonPanelBottom = new JPanel();
+        backButtonPanelBottom.setLayout(new BoxLayout(backButtonPanelBottom, BoxLayout.X_AXIS));
+        backButtonPanelBottom.setBackground(Color.WHITE);
+        backButtonPanelBottom.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+
+        // Add back button at the bottom right
+        JButton backButtonBottom = new JButton("Back");
+        backButtonBottom.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        backButtonBottom.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dispose(); // Close the window
+            }
+        });
+        backButtonPanelBottom.add(Box.createHorizontalGlue());
+        backButtonPanelBottom.add(backButtonBottom);
+
+        mainPanel.add(backButtonPanelBottom);
 
         JScrollPane scrollPane = new JScrollPane(mainPanel);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         add(scrollPane);
 
         setVisible(true);
+    }
+
+    private void exportTripPlanToTxt() {
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("trip_plan.txt"))) {
+            for (int i = 0; i < tripPlan.size(); i++) {
+                TripPlanLeg leg = tripPlan.get(i);
+
+                TripPlanLeg nextLeg;
+                if (i != tripPlan.size() - 1) {
+                    nextLeg = tripPlan.get(i+1);
+                }
+                if (leg.getLegType() == TripPlanLeg.LegType.TRANSIT) {
+                    String fromStopName = leg.getFromStop().getStopName();
+                    String startTime = leg.getStartTime().format(timeFormatter);
+                    String routeShortName = leg.getRouteShortName();
+                    Trip trip = tripMap.get(leg.getTripId());
+                    String toStopName = (trip != null) ? trip.getTripHeadsign().orElse("") : "";
+                    long durationMinutes = leg.getDuration() / 60;
+                    writer.write("O- " + fromStopName + " - " + startTime + "\n");
+                    writer.write("|\n");
+                    writer.write("|-- (" + routeShortName + " ▶ " + toStopName + ") X stations- " + durationMinutes + " Minutes\n");
+                    writer.write("|\n");
+                } else if (leg.getLegType() == TripPlanLeg.LegType.WALK) {
+                    String fromStopName = leg.getFromStop().getStopName();
+                    String startTime = leg.getStartTime().format(timeFormatter);
+                    double distance = leg.getDistance();
+                    long durationMinutes = leg.getDuration() / 60;
+                    writer.write("O- " + fromStopName + " - " + startTime + "\n");
+                    writer.write("|\n");
+                    writer.write("|-- " + durationMinutes + " minute walk (" + String.format("%.0f m", distance) + ")\n");
+                    writer.write("|\n");
+                } else if (leg.getLegType() == TripPlanLeg.LegType.TRANSFER) {
+                    String fromStopName = leg.getFromStop().getStopName();
+                    String startTime = leg.getStartTime().format(timeFormatter);
+                    writer.write("O- " + fromStopName + " - " + startTime + "\n");
+                    writer.write("|\n");
+                    writer.write("|-- Transfer - " + (leg.getDuration() / 60) + " minute wait\n");
+                    writer.write("|\n");
+                }
+            }
+            // Write the final destination stop
+            TripPlanLeg lastLeg = tripPlan.getLast();
+            String finalStopName = lastLeg.getToStop().getStopName();
+            String endTime = lastLeg.getEndTime().format(timeFormatter);
+            writer.write("O-" + finalStopName + " - " + endTime + "\n");
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "Error exporting trip plan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private JPanel createStopPanel(TripPlanLeg leg, boolean isFirstLeg,

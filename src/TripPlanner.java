@@ -409,7 +409,7 @@ public class TripPlanner {
     }
 
     // Node entry for the priority queue
-    private class NodeEntry {
+    private static class NodeEntry {
         String stopId;
         long earliestArrivalTime; // in seconds from midnight
         NodeEntry previousNode;

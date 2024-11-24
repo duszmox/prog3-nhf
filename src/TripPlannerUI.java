@@ -21,6 +21,7 @@ public class TripPlannerUI extends JFrame {
     private TripPlanner tripPlanner;
     private JDialog loadingDialog;
     private List<Route> routes;
+    private List<Trip> trips;
 
 
     public TripPlannerUI(List<Stop> stops, List<StopTime> stopTimes, List<Pathway> pathways, List<Trip> trips, List<Route> routes) {
@@ -37,6 +38,7 @@ public class TripPlannerUI extends JFrame {
         // Initialize TripPlanner
         this.tripPlanner = new TripPlanner(stops, stopTimes, pathways, trips, routes);
         this.routes = routes;
+        this.trips = trips;
         // Set up the frame
         setTitle("GTFS Trip Planner");
         setSize(400, 300);
@@ -135,7 +137,11 @@ public class TripPlannerUI extends JFrame {
                         for (Route route : routes) {
                             routeMap.put(route.getRouteId(), route);
                         }
-                        TransitItineraryWithLines itineraryView = new TransitItineraryWithLines(tripPlan, routeMap);
+                        Map<String, Trip> tripMap = new HashMap<>();
+                        for (Trip trip : trips) {
+                            tripMap.put(trip.getTripId(), trip);
+                        }
+                        TransitItineraryWithLines itineraryView = new TransitItineraryWithLines(tripPlan, routeMap, tripMap);
                         itineraryView.setVisible(true);
                     }
                 } catch (Exception ex) {
