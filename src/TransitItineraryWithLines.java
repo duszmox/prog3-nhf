@@ -27,7 +27,7 @@ public class TransitItineraryWithLines extends JFrame {
         // Loop through the tripPlan and add itinerary items
         for (int i = 0; i < tripPlan.size(); i++) {
             TripPlanLeg leg = tripPlan.get(i);
-            boolean isLastLeg = (i == tripPlan.size() - 1);
+            boolean isLastLeg = (i == tripPlan.size());
             boolean isFirstLeg = (i == 0);
 
             // Create the panel for the leg
@@ -103,9 +103,9 @@ public class TransitItineraryWithLines extends JFrame {
         String details = "";
 
         if (leg.getLegType() == TripPlanLeg.LegType.TRANSIT) {
-            transport = leg.getRouteShortName() + " " + getTransportModeName(leg.getRouteId());
+            transport = getTransportModeName(leg.getRouteId()) + " " + leg.getRouteShortName() ;
             long durationMinutes = leg.getDuration()/60;
-            details = durationMinutes + " min " + leg.getTripId();
+            details = durationMinutes + " min ";
         } else if (leg.getLegType() == TripPlanLeg.LegType.WALK) {
             transport = "Walking";
             long durationMinutes = leg.getDuration()/60;
@@ -213,6 +213,9 @@ public class TransitItineraryWithLines extends JFrame {
 
             if (isFirstLeg) {
                 yStart = getHeight() / 2;
+            }
+            if (isLastLeg) {
+                yEnd = getHeight() / 2;
             }
 
             if (leg != null) {

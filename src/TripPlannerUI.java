@@ -38,7 +38,7 @@ public class TripPlannerUI extends JFrame {
         this.tripPlanner = new TripPlanner(stops, stopTimes, pathways, trips, routes);
         this.routes = routes;
         // Set up the frame
-        setTitle("GTFS model.Trip Planner");
+        setTitle("GTFS Trip Planner");
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 

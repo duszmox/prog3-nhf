@@ -246,10 +246,6 @@ public class TripPlanner {
                                 continue; // Cannot make this transfer
                             }
                         }
-
-                        if (transfers > 4) {
-                            continue; // Exceeds transfer limit
-                        }
                     } else {
                         continue; // Invalid departure time
                     }
@@ -333,15 +329,22 @@ public class TripPlanner {
                 }
             } else if (edge.type == EdgeType.WALK || edge.type == EdgeType.PATHWAY) {
                 legType = TripPlanLeg.LegType.WALK;
-                distance = haversine(
-                        fromStop.getStopLat(), fromStop.getStopLon(),
-                        toStop.getStopLat(), toStop.getStopLon()
-                );
-//                if (previousTripPlanLeg != null && previousTripPlanLeg.getLegType() == legType) {
-//                    previousTripPlanLeg.setDistance(previousTripPlanLeg.getDistance() + distance);
-//                    previousTripPlanLeg.setEndTime(endTime);
-//                    continue;
-//                }
+                if (previousTripPlanLeg != null && previousTripPlanLeg.getLegType() == legType) {
+                    distance = haversine(
+                            previousTripPlanLeg.getFromStop().getStopLat(), previousTripPlanLeg.getFromStop().getStopLon(),
+                            toStop.getStopLat(), toStop.getStopLon()
+                    );
+                    previousTripPlanLeg.setDistance(distance);
+                    previousTripPlanLeg.setEndTime(endTime);
+                    previousTripPlanLeg.setDuration(previousTripPlanLeg.getDuration() + edge.travelTime);
+                    previousTripPlanLeg.setToStop(toStop);
+                    continue;
+                } else {
+                    distance = haversine(
+                            fromStop.getStopLat(), fromStop.getStopLon(),
+                            toStop.getStopLat(), toStop.getStopLon()
+                    );
+                }
             } else {
                 legType = TripPlanLeg.LegType.WALK; // Default to WALK for other types
             }
