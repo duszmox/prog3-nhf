@@ -46,6 +46,7 @@ public class TripPlannerUI extends JFrame {
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        setResizable(false);
 
         ImageIcon img = new ImageIcon("icon.png");
         setIconImage(img.getImage());
@@ -90,8 +91,15 @@ public class TripPlannerUI extends JFrame {
     }
 
     private void planTrip() {
-        Stop startStop = (Stop) startStopComboBox.getSelectedItem();
-        Stop endStop = (Stop) endStopComboBox.getSelectedItem();
+        final Stop startStop;
+        final Stop endStop;
+        try {
+            startStop = (Stop) startStopComboBox.getSelectedItem();
+            endStop = (Stop) endStopComboBox.getSelectedItem();
+        } catch (ClassCastException e) {
+            JOptionPane.showMessageDialog(this, "Please select both start and end stations.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
         if (startStop == null || endStop == null) {
             JOptionPane.showMessageDialog(this, "Please select both start and end stations.", "Error", JOptionPane.ERROR_MESSAGE);

@@ -4,7 +4,7 @@ import java.awt.*;
 public class LoadingDialog extends JDialog {
 
     public LoadingDialog(JFrame parent) {
-        super(parent, "Loading", false); // Non-modal dialog
+        super(parent, "Loading..", false); // Non-modal dialog
 
         JLabel loadingLabel = new JLabel("Planning your trip, please wait...");
         loadingLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -19,6 +19,7 @@ public class LoadingDialog extends JDialog {
         add(contentPanel);
         setSize(300, 100);
         setLocationRelativeTo(parent);
+        setResizable(false);
         setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
     }
 }

@@ -26,6 +26,7 @@ public class TransitItineraryWithLines extends JFrame {
         this.routeMap = routeMap;
         this.tripPlan = new ArrayList<>(tripPlan); // Work on a modifiable list
         this.tripMap = tripMap;
+
         setTitle("Transit Itinerary");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(500, 600);
@@ -33,6 +34,9 @@ public class TransitItineraryWithLines extends JFrame {
 
         ImageIcon img = new ImageIcon("icon.png");
         setIconImage(img.getImage());
+
+        // Set up the menu bar
+        setUpMenuBar();
 
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
@@ -45,6 +49,22 @@ public class TransitItineraryWithLines extends JFrame {
         add(scrollPane);
 
         setVisible(true);
+    }
+
+    private void setUpMenuBar() {
+        JMenuBar menuBar = new JMenuBar();
+        JMenu fileMenu = new JMenu("File");
+
+        JMenuItem backMenuItem = new JMenuItem("Back");
+        backMenuItem.addActionListener(_ -> dispose()); // Close the window
+        fileMenu.add(backMenuItem);
+
+        JMenuItem exportMenuItem = new JMenuItem("Export to TXT");
+        exportMenuItem.addActionListener(_ -> exportTripPlanToTxt());
+        fileMenu.add(exportMenuItem);
+
+        menuBar.add(fileMenu);
+        setJMenuBar(menuBar);
     }
 
     private void renderComponents(JPanel mainPanel) {
@@ -448,7 +468,9 @@ public class TransitItineraryWithLines extends JFrame {
                 case 5 -> "Cable Car";
                 case 6 -> "Gondola";
                 case 7 -> "Funicular";
-                default -> "Trolley";
+                case 11 -> "Trolley";
+                case 109 -> "Suburban Railway";
+                default -> "Transit";
             };
         }
         return "Transit";

@@ -19,7 +19,19 @@ public class AutoCompleteComboBox extends JComboBox<Stop> {
     private void configureAutoComplete() {
         JTextField textField = (JTextField) getEditor().getEditorComponent();
         textField.addKeyListener(new KeyAdapter() {
+            @Override
             public void keyReleased(KeyEvent e) {
+                // Ignore navigation keys
+                switch (e.getKeyCode()) {
+                    case KeyEvent.VK_UP:
+                    case KeyEvent.VK_DOWN:
+                    case KeyEvent.VK_LEFT:
+                    case KeyEvent.VK_RIGHT:
+                    case KeyEvent.VK_ENTER:
+                    case KeyEvent.VK_ESCAPE:
+                        return;
+                }
+
                 SwingUtilities.invokeLater(() -> {
                     String text = textField.getText();
                     if (text.isEmpty()) {
