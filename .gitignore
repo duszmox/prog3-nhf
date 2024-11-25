@@ -30,3 +30,5 @@ bin/
 budapest_gtfs/
 
 trip_plan.txt
+
+target/

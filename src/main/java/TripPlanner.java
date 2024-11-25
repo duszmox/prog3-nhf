@@ -9,11 +9,11 @@ import java.util.stream.Collectors;
 
 public class TripPlanner {
 
-    private final List<Stop> stops;
-    private final List<StopTime> stopTimes;
-    private final List<Pathway> pathways;
-    private final List<Trip> trips;
-    private final List<Route> routes;
+    final List<Stop> stops;
+    final List<StopTime> stopTimes;
+    final List<Pathway> pathways;
+    final List<Trip> trips;
+    final List<Route> routes;
 
     // Constructor
     public TripPlanner(List<Stop> stops, List<StopTime> stopTimes, List<Pathway> pathways, List<Trip> trips, List<Route> routes) {
@@ -40,7 +40,7 @@ public class TripPlanner {
     }
 
     // Function to get active trip IDs on the given date
-    private Set<String> getActiveTripIds(LocalDate date) {
+    Set<String> getActiveTripIds(LocalDate date) {
         Set<String> activeTripIds = new HashSet<>();
         for (Trip trip : trips) {
             if (trip.getServiceDates().contains(date)) {
@@ -51,7 +51,7 @@ public class TripPlanner {
     }
 
     // Function to filter stop times within a time window
-    private List<StopTime> filterStopTimes(Set<String> activeTripIds, LocalTime departureTime) {
+    List<StopTime> filterStopTimes(Set<String> activeTripIds, LocalTime departureTime) {
         List<StopTime> filteredStopTimes = new ArrayList<>();
         LocalTime endTime = departureTime.plusHours(2); // 2-hour window
 
@@ -69,7 +69,7 @@ public class TripPlanner {
         return filteredStopTimes;
     }
 
-    private Map<String, List<Edge>> buildGraph(List<StopTime> filteredStopTimes, String startStopId, String endStopId) {
+    Map<String, List<Edge>> buildGraph(List<StopTime> filteredStopTimes, String startStopId, String endStopId) {
 
         Map<String, List<Edge>> graph = Collections.synchronizedMap(new HashMap<>());
 
@@ -85,7 +85,7 @@ public class TripPlanner {
         return graph;
     }
 
-    private static void addStopTimeEdges(List<StopTime> filteredStopTimes, Map<String, List<Edge>> graph) {
+    static void addStopTimeEdges(List<StopTime> filteredStopTimes, Map<String, List<Edge>> graph) {
         // Build edges from stop times (scheduled transit)
         Map<String, List<StopTime>> stopTimesByTrip = new HashMap<>();
         filteredStopTimes.forEach(stopTime ->
@@ -116,7 +116,7 @@ public class TripPlanner {
         });
     }
 
-    private void addPathWayEdges(Map<String, List<Edge>> graph) {
+    void addPathWayEdges(Map<String, List<Edge>> graph) {
         // Add pathway edges
         pathways.parallelStream().forEach(pathway -> {
             String fromStopId = pathway.getFromStopId();
@@ -135,7 +135,7 @@ public class TripPlanner {
         });
     }
 
-    private void addWalkEdges(String startStopId, String endStopId, Map<String, List<Edge>> graph) {
+    void addWalkEdges(String startStopId, String endStopId, Map<String, List<Edge>> graph) {
         // Build walking edges between stops within 500 meters of start and end stops
         Set<String> relevantStopIds = getRelevantStopIds(startStopId, endStopId);
 
@@ -382,7 +382,7 @@ public class TripPlanner {
 
 
     // Edge class to represent connections between stops
-    private static class Edge {
+    static class Edge {
         String toStopId;
         long travelTime; // in seconds
         EdgeType type;
