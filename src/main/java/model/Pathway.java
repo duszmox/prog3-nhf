@@ -2,15 +2,50 @@ package model;
 
 import java.util.Optional;
 
+/**
+ * A Pathway osztály egy aluljárót reprezentál, amely összeköt két megállót.
+ */
 public class Pathway {
-    private String pathwayId;                 // Required
-    private int pathwayMode;                  // Required (1 = Walkway, 2 = Stairs, etc.)
-    private int isBidirectional;              // Required (0 = one-way, 1 = bidirectional)
-    private String fromStopId;                // Required
-    private String toStopId;                  // Required
-    private Optional<Integer> traversalTime;  // Optional (time in seconds)
+    /**
+     * Az aluljáró egyedi azonosítója. Kötelező.
+     */
+    private String pathwayId;
 
-    // Constructor with all fields (including optional traversal time)
+    /**
+     * Az aluljáró módja. Kötelező (1 = folyosó, 2 = lépcső, stb.).
+     */
+    private int pathwayMode;
+
+    /**
+     * Az aluljáró kétirányúságát jelzi. Kötelező (0 = egyirányú, 1 = kétirányú).
+     */
+    private int isBidirectional;
+
+    /**
+     * Az indulási megálló azonosítója. Kötelező.
+     */
+    private String fromStopId;
+
+    /**
+     * Az érkezési megálló azonosítója. Kötelező.
+     */
+    private String toStopId;
+
+    /**
+     * Az átkelési idő másodpercekben. Opcionális.
+     */
+    private Optional<Integer> traversalTime;
+
+    /**
+     * Konstruktor, amely minden mezőt inicializál, beleértve az opcionális átkelési időt.
+     *
+     * @param pathwayId      Az aluljáró egyedi azonosítója.
+     * @param pathwayMode    Az aluljáró módja.
+     * @param isBidirectional Az aluljáró kétirányúságát jelzi.
+     * @param fromStopId     Az indulási megálló azonosítója.
+     * @param toStopId       Az érkezési megálló azonosítója.
+     * @param traversalTime  Az átkelési idő másodpercekben.
+     */
     public Pathway(String pathwayId, int pathwayMode, int isBidirectional,
                    String fromStopId, String toStopId, Optional<Integer> traversalTime) {
         this.pathwayId = pathwayId;
@@ -21,28 +56,58 @@ public class Pathway {
         this.traversalTime = traversalTime;
     }
 
-    // Constructor without optional traversal time
-    public Pathway(String pathwayId, int pathwayMode, int isBidirectional,
-                   String fromStopId, String toStopId) {
-        this(pathwayId, pathwayMode, isBidirectional, fromStopId, toStopId, Optional.empty());
+    /**
+     * Visszaadja az aluljáró azonosítóját.
+     *
+     * @return Az aluljáró azonosítója.
+     */
+    public String getPathwayId() {
+        return pathwayId;
     }
 
-    // Getters and setters
-    public String getPathwayId() { return pathwayId; }
-    public void setPathwayId(String pathwayId) { this.pathwayId = pathwayId; }
 
-    public int getPathwayMode() { return pathwayMode; }
-    public void setPathwayMode(int pathwayMode) { this.pathwayMode = pathwayMode; }
+    /**
+     * Visszaadja az aluljáró módját.
+     *
+     * @return Az aluljáró módja.
+     */
+    public int getPathwayMode() {
+        return pathwayMode;
+    }
 
-    public int getIsBidirectional() { return isBidirectional; }
-    public void setIsBidirectional(int isBidirectional) { this.isBidirectional = isBidirectional; }
+    /**
+     * Visszaadja, hogy az aluljáró kétirányú-e.
+     *
+     * @return 0, ha egyirányú, 1 ha kétirányú.
+     */
+    public int getIsBidirectional() {
+        return isBidirectional;
+    }
 
-    public String getFromStopId() { return fromStopId; }
-    public void setFromStopId(String fromStopId) { this.fromStopId = fromStopId; }
+    /**
+     * Visszaadja az indulási megálló azonosítóját.
+     *
+     * @return Az indulási megálló azonosítója.
+     */
+    public String getFromStopId() {
+        return fromStopId;
+    }
 
-    public String getToStopId() { return toStopId; }
-    public void setToStopId(String toStopId) { this.toStopId = toStopId; }
+    /**
+     * Visszaadja az érkezési megálló azonosítóját.
+     *
+     * @return Az érkezési megálló azonosítója.
+     */
+    public String getToStopId() {
+        return toStopId;
+    }
 
-    public Optional<Integer> getTraversalTime() { return traversalTime; }
-    public void setTraversalTime(Optional<Integer> traversalTime) { this.traversalTime = traversalTime; }
+    /**
+     * Visszaadja az átkelési időt.
+     *
+     * @return Az átkelési idő másodpercekben, ha meg van adva.
+     */
+    public Optional<Integer> getTraversalTime() {
+        return traversalTime;
+    }
 }

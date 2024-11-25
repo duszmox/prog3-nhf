@@ -5,6 +5,7 @@ import java.awt.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 import java.io.*;
@@ -13,21 +14,56 @@ import java.nio.file.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-
+/**
+ * A TripPlannerUI osztály egy grafikus felhasználói felületet biztosít az utazás tervezéséhez.
+ */
 public class TripPlannerUI extends JFrame {
 
+    /**
+     * A kezdő megálló kiválasztásához használt legördülő lista.
+     */
     private final JComboBox<Stop> startStopComboBox;
+
+    /**
+     * A cél megálló kiválasztásához használt legördülő lista.
+     */
     private final JComboBox<Stop> endStopComboBox;
+
+    /**
+     * Az utazás megtervezéséhez használt gomb.
+     */
     private final JButton planTripButton;
+
+    /**
+     * A dátum kiválasztásához használt spinner.
+     */
     private final JSpinner dateSpinner;
+
+    /**
+     * Az indulási idő kiválasztásához használt spinner.
+     */
     private final JSpinner timeSpinner;
+
+    /**
+     * A TripPlanner példány, amely az útvonaltervezésért felelős.
+     */
     private final TripPlanner tripPlanner;
+
     private final List<Route> routes;
     private final List<Trip> trips;
 
-
+    /**
+     * Konstruktor, amely inicializálja a felhasználói felületet és a szükséges adatokat.
+     *
+     * @param stops     A rendelkezésre álló megállók listája.
+     * @param stopTimes A megállóidők listája.
+     * @param pathways  Az aluljárók listája.
+     * @param trips     A járatok listája.
+     * @param routes    A vonalak listája.
+     * @throws RuntimeException ha a feed_info nem beolvasható.
+     */
     public TripPlannerUI(List<Stop> stops, List<StopTime> stopTimes, List<Pathway> pathways, List<Trip> trips, List<Route> routes) {
-        // Filter stops to include only parent stations
+        // Csak a szülő állomásokat tartalmazó megállók szűrése
         List<Stop> parentStations = new ArrayList<>();
         for (Stop stop : stops) {
             if (stop.getParentStation().isEmpty()) {
@@ -37,11 +73,12 @@ public class TripPlannerUI extends JFrame {
 
         parentStations.sort(Comparator.comparing(Stop::getStopName, String.CASE_INSENSITIVE_ORDER));
 
-        // Initialize TripPlanner
+        // TripPlanner inicializálása
         this.tripPlanner = new TripPlanner(stops, stopTimes, pathways, trips, routes);
         this.routes = routes;
         this.trips = trips;
-        // Set up the frame
+
+        // Keret beállítása
         setTitle("GTFS Trip Planner");
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -51,8 +88,7 @@ public class TripPlannerUI extends JFrame {
         ImageIcon img = new ImageIcon("icon.png");
         setIconImage(img.getImage());
 
-        // Initialize components
-        // If using custom autocomplete
+        // Komponensek inicializálása
         startStopComboBox = new AutoCompleteComboBox(parentStations);
         endStopComboBox = new AutoCompleteComboBox(parentStations);
 
@@ -61,11 +97,11 @@ public class TripPlannerUI extends JFrame {
         dateSpinner = new JSpinner(new SpinnerDateModel());
         timeSpinner = new JSpinner(new SpinnerDateModel());
 
-        // Configure the spinners
+        // Spinner-ek konfigurálása
         dateSpinner.setEditor(new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd"));
         timeSpinner.setEditor(new JSpinner.DateEditor(timeSpinner, "HH:mm"));
 
-        // Set up layout
+        // Elrendezés beállítása
         JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
@@ -81,16 +117,47 @@ public class TripPlannerUI extends JFrame {
         panel.add(new JLabel("Departure Time:"));
         panel.add(timeSpinner);
 
-        panel.add(new JLabel()); // Empty cell
+        panel.add(new JLabel()); // Üres cella
         panel.add(planTripButton);
 
         add(panel);
 
-        // Add action listener to the button
-        planTripButton.addActionListener(_ -> planTrip());
+        planTripButton.addActionListener(_ -> {
+            try {
+                planTrip();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
-    private void planTrip() {
+    /**
+     * Betölti a GTFS adatcsomag `feed_info.txt` fájljából a feed kezdési és záró dátumát.
+     *
+     * @return Egy LocalDate tömb, amely tartalmazza a feed kezdési és záró dátumát.
+     *         Az első elem a kezdési dátum (feed_start_date), a második a záró dátum (feed_end_date).
+     * @throws IOException Ha a fájl nem érhető el, üres, vagy a formátum nem megfelelő.
+     **/
+    private static LocalDate[] loadFeedInfo() throws IOException {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        try (BufferedReader reader = new BufferedReader(new FileReader("./budapest_gtfs/feed_info.txt"))) {
+            reader.readLine(); // Fejléc kihagyása
+            String line = reader.readLine();
+            if (line != null) {
+                String[] fields = line.split(",");
+                LocalDate feedStartDate = LocalDate.parse(fields[4], formatter);
+                LocalDate feedEndDate = LocalDate.parse(fields[5], formatter);
+                return new LocalDate[]{feedStartDate, feedEndDate};
+            } else {
+                throw new IOException("Feed info file is empty.");
+            }
+        }
+    }
+
+    /**
+     * Az utazás megtervezését végző metódus.
+     */
+    private void planTrip() throws IOException {
         final Stop startStop;
         final Stop endStop;
         try {
@@ -106,36 +173,46 @@ public class TripPlannerUI extends JFrame {
             return;
         }
 
-        // Retrieve the date and time from the spinners
+        // Dátum és idő lekérése a spinner-ekből
         Date selectedDate = (Date) dateSpinner.getValue();
         Date selectedTime = (Date) timeSpinner.getValue();
 
-        // Convert to LocalDate and LocalTime
+        LocalDate[] feedDates = loadFeedInfo();
+
+        // Átalakítás LocalDate és LocalTime típusra
         LocalDate date = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalTime departureTime = selectedTime.toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
 
-        // Disable the button to prevent multiple clicks
+        if (date.isBefore(feedDates[0]) || date.isAfter(feedDates[1])) {
+            JOptionPane.showMessageDialog(this,
+                    "Selected date is outside the feed validity period (" + feedDates[0] + " to " + feedDates[1] + ").",
+                    "Invalid Date",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+        // Gomb letiltása a többszöri kattintás megelőzésére
         planTripButton.setEnabled(false);
 
-        // Create and show the loading dialog
+        // Betöltő ablak megjelenítése
         LoadingDialog loadingDialog = new LoadingDialog(this);
         SwingUtilities.invokeLater(() -> loadingDialog.setVisible(true));
 
-        // Use SwingWorker to run in the background
+        // Háttérben futó folyamat indítása
         SwingWorker<List<TripPlanLeg>, Void> worker = new SwingWorker<>() {
             @Override
             protected List<TripPlanLeg> doInBackground() {
-                // Call the TripPlanner
+                // Utazástervező meghívása
                 return tripPlanner.findOptimalPath(startStop.getStopId(), endStop.getStopId(), date, departureTime);
             }
 
             @Override
             protected void done() {
                 try {
-                    // Get the trip plan
+                    // Utazási terv lekérése
                     List<TripPlanLeg> tripPlan = get();
 
-                    // Hide the loading dialog
+                    // Betöltő ablak elrejtése
                     loadingDialog.dispose();
 
                     if (tripPlan.isEmpty()) {
@@ -161,11 +238,15 @@ public class TripPlannerUI extends JFrame {
             }
         };
 
-        // Execute the worker in a separate thread
+        // A háttérfolyamat végrehajtása külön szálon
         worker.execute();
     }
 
-
+    /**
+     * GTFS adatok letöltése és kicsomagolása.
+     *
+     * @throws IOException Ha hiba történik a letöltés vagy kicsomagolás során.
+     */
     public static void downloadAndExtractGtfsData() throws IOException {
         String url = "https://bkk.hu/gtfs/budapest_gtfs.zip";
         String zipFilePath = "./budapest_gtfs.zip";
@@ -174,22 +255,29 @@ public class TripPlannerUI extends JFrame {
         if (!Files.exists(Paths.get(destDir))) {
             System.out.println("GTFS data not found. Downloading...");
 
-            // Download the zip file
+            // Zip fájl letöltése
             Path target = Paths.get(zipFilePath);
             try (InputStream in = new URL(url).openStream()) {
                 Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            // Extract the zip file
+            // Zip fájl kicsomagolása
             System.out.println("Extracting GTFS data...");
             unzip(zipFilePath, destDir);
 
-            // Delete the zip file after extraction
+            // Zip fájl törlése a kicsomagolás után
             Files.delete(target);
             System.out.println("GTFS data extracted successfully.");
         }
     }
 
+    /**
+     * Zip fájl kicsomagolása.
+     *
+     * @param zipFilePath A zip fájl elérési útja.
+     * @param destDir     A célkönyvtár elérési útja.
+     * @throws IOException Ha hiba történik a kicsomagolás során.
+     */
     private static void unzip(String zipFilePath, String destDir) throws IOException {
         File dir = new File(destDir);
         if (!dir.exists()) dir.mkdirs();
@@ -204,13 +292,13 @@ public class TripPlannerUI extends JFrame {
                         throw new IOException("Failed to create directory " + newFile);
                     }
                 } else {
-                    // Create directories for entry
+                    // Könyvtárak létrehozása az adott bejegyzéshez
                     File parent = newFile.getParentFile();
                     if (!parent.isDirectory() && !parent.mkdirs()) {
                         throw new IOException("Failed to create directory " + parent);
                     }
 
-                    // Write file content
+                    // Fájl tartalmának írása
                     try (FileOutputStream fos = new FileOutputStream(newFile)) {
                         int len;
                         while ((len = zis.read(buffer)) > 0) {
@@ -224,6 +312,14 @@ public class TripPlannerUI extends JFrame {
         }
     }
 
+    /**
+     * Új fájl létrehozása a célkönyvtárban.
+     *
+     * @param destinationDir A célkönyvtár.
+     * @param zipEntry       A zip bejegyzés.
+     * @return Az új fájl objektum.
+     * @throws IOException Ha hiba történik a fájl létrehozása során.
+     */
     private static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
         File destFile = new File(destinationDir, zipEntry.getName());
 
@@ -231,16 +327,21 @@ public class TripPlannerUI extends JFrame {
         String destFilePath = destFile.getCanonicalPath();
 
         if (!destFilePath.startsWith(destDirPath + File.separator)) {
-            throw new IOException("Entry is outside of the target dir: " + zipEntry.getName());
+            throw new IOException("A bejegyzés kívül esik a célkönyvtáron: " + zipEntry.getName());
         }
 
         return destFile;
     }
 
-    // Main method to run the GUI
+    /**
+     * A fő metódus, amely elindítja a felhasználói felületet.
+     *
+     * @param args Parancssori argumentumok.
+     * @throws Exception Ha hiba történik a GTFS adatok betöltése során.
+     */
     public static void main(String[] args) throws Exception {
         downloadAndExtractGtfsData();
-        // Load GTFS data (similar to your existing code)
+        // GTFS adatok betöltése
         String gtfsFolderPath = "./budapest_gtfs/";
 
         List<Stop> stops = GtfsLoader.loadStops(gtfsFolderPath + "stops.txt");
@@ -250,13 +351,13 @@ public class TripPlannerUI extends JFrame {
         List<Route> routes = GtfsLoader.loadRoutes(gtfsFolderPath + "routes.txt");
         Map<String, List<LocalDate>> serviceDatesMap = GtfsLoader.loadCalendarDates(gtfsFolderPath + "calendar_dates.txt");
 
-        // Link service dates with trips
+        // Szolgáltatási dátumok hozzárendelése az utazásokhoz
         for (Trip trip : trips) {
             List<LocalDate> serviceDates = serviceDatesMap.getOrDefault(trip.getServiceId(), new ArrayList<>());
             trip.setServiceDates(serviceDates);
         }
 
-        // Create and show the GUI
+        // Felhasználói felület létrehozása és megjelenítése
         SwingUtilities.invokeLater(() -> {
             TripPlannerUI ui = new TripPlannerUI(stops, stopTimes, pathways, trips, routes);
             ui.setVisible(true);

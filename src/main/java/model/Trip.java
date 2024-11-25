@@ -2,21 +2,75 @@ package model;
 
 import java.time.LocalDate;
 import java.util.Optional;
-
 import java.util.List;
 
+/**
+ * A Trip osztály egy vonalon belüli jármű mozgását reprezentálja.
+ */
 public class Trip {
-    private String routeId;                        // Required
-    private String tripId;                         // Required
-    private String serviceId;                      // Required
-    private List<LocalDate> serviceDates;          // Required for service dates
-    private Optional<String> tripHeadsign;         // Optional
-    private Optional<Integer> directionId;         // Optional (0 = outbound, 1 = inbound)
-    private Optional<String> blockId;              // Optional
-    private Optional<String> shapeId;              // Optional
-    private Optional<Integer> wheelchairAccessible;// Optional (0 = no info, 1 = accessible, 2 = not accessible)
-    private Optional<Integer> bikesAllowed;        // Optional (0 = no info, 1 = allowed, 2 = not allowed)
+    /**
+     * A járat vonalának egyedi azonosítója. Kötelező.
+     */
+    private String routeId;
 
+    /**
+     * A járat egyedi azonosítója. Kötelező.
+     */
+    private String tripId;
+
+    /**
+     * A szolgáltatás egyedi azonosítója. Kötelező.
+     */
+    private String serviceId;
+
+    /**
+     * A szolgáltatási napok listája. Kötelező a szolgáltatási napokhoz.
+     */
+    private List<LocalDate> serviceDates;
+
+    /**
+     * A járat feljéce. Opcionális
+     */
+    private Optional<String> tripHeadsign;
+
+    /**
+     * Az irány azonosítója. Opcionális (0 = outbound, 1 = inbound).
+     */
+    private Optional<Integer> directionId;
+
+    /**
+     * A blokk azonosítója. Opcionális
+     */
+    private Optional<String> blockId;
+
+    /**
+     * A shape egyedi azonosítója. Opcionális
+     */
+    private Optional<String> shapeId;
+
+    /**
+     * Információ a kerekesszékkel való hozzáférhetőségről. Opcionális (0 = nincs információ, 1 = hozzáférhető, 2 = nem hozzáférhető).
+     */
+    private Optional<Integer> wheelchairAccessible;
+
+    /**
+     * Információ a kerékpárok szállíthatóságáról. Opcionális (0 = nincs információ, 1 = engedélyezett, 2 = nem engedélyezett).
+     */
+    private Optional<Integer> bikesAllowed;
+
+    /**
+     * Konstruktor, amely inicializálja minden mezőt, beleértve az opcionálisakat.
+     *
+     * @param routeId                A járat vonalának egyedi azonosítója.
+     * @param tripId                 A járat egyedi azonosítója.
+     * @param serviceId              A szolgáltatás egyedi azonosítója.
+     * @param tripHeadsign           A járat fejléce.
+     * @param directionId            Az irány azonosítója.
+     * @param blockId                A blokk azonosítója.
+     * @param shapeId                A shape egyedi azonosítója.
+     * @param wheelchairAccessible   Információ a kerekesszékkel való hozzáférhetőségről.
+     * @param bikesAllowed           Információ a kerékpárok engedélyezéséről.
+     */
     public Trip(String routeId, String tripId, String serviceId,
                 Optional<String> tripHeadsign, Optional<Integer> directionId,
                 Optional<String> blockId, Optional<String> shapeId,
@@ -32,42 +86,58 @@ public class Trip {
         this.bikesAllowed = bikesAllowed;
     }
 
-    // Constructor with only required fields
-    public Trip(String routeId, String tripId, String serviceId) {
-        this(routeId, tripId, serviceId, Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+    /**
+     * Visszaadja a szolgáltatási napok listáját.
+     *
+     * @return A szolgáltatási napok listája.
+     */
+    public List<LocalDate> getServiceDates() {
+        return serviceDates;
     }
 
-    // Getter and setter for serviceDates
-    public List<LocalDate> getServiceDates() { return serviceDates; }
-    public void setServiceDates(List<LocalDate> serviceDates) { this.serviceDates = serviceDates; }
+    /**
+     * Beállítja a szolgáltatási napok listáját.
+     *
+     * @param serviceDates Az új szolgáltatási napok listája.
+     */
+    public void setServiceDates(List<LocalDate> serviceDates) {
+        this.serviceDates = serviceDates;
+    }
+
+    /**
+     * Visszaadja a járat vonalának egyedi azonosítóját.
+     *
+     * @return A vonal egyedi azonosítója.
+     */
+    public String getRouteId() {
+        return routeId;
+    }
+
+    /**
+     * Visszaadja a járat egyedi azonosítóját.
+     *
+     * @return A járat egyedi azonosítója.
+     */
+    public String getTripId() {
+        return tripId;
+    }
 
 
-    // Getters and setters
-    public String getRouteId() { return routeId; }
-    public void setRouteId(String routeId) { this.routeId = routeId; }
+    /**
+     * Visszaadja a szolgáltatás egyedi azonosítóját.
+     *
+     * @return A szolgáltatás egyedi azonosítója.
+     */
+    public String getServiceId() {
+        return serviceId;
+    }
 
-    public String getTripId() { return tripId; }
-    public void setTripId(String tripId) { this.tripId = tripId; }
-
-    public String getServiceId() { return serviceId; }
-    public void setServiceId(String serviceId) { this.serviceId = serviceId; }
-
-    public Optional<String> getTripHeadsign() { return tripHeadsign; }
-    public void setTripHeadsign(Optional<String> tripHeadsign) { this.tripHeadsign = tripHeadsign; }
-
-    public Optional<Integer> getDirectionId() { return directionId; }
-    public void setDirectionId(Optional<Integer> directionId) { this.directionId = directionId; }
-
-    public Optional<String> getBlockId() { return blockId; }
-    public void setBlockId(Optional<String> blockId) { this.blockId = blockId; }
-
-    public Optional<String> getShapeId() { return shapeId; }
-    public void setShapeId(Optional<String> shapeId) { this.shapeId = shapeId; }
-
-    public Optional<Integer> getWheelchairAccessible() { return wheelchairAccessible; }
-    public void setWheelchairAccessible(Optional<Integer> wheelchairAccessible) { this.wheelchairAccessible = wheelchairAccessible; }
-
-    public Optional<Integer> getBikesAllowed() { return bikesAllowed; }
-    public void setBikesAllowed(Optional<Integer> bikesAllowed) { this.bikesAllowed = bikesAllowed; }
+    /**
+     * Visszaadja a járat fejlécét.
+     *
+     * @return A járat fejléce, ha meg van adva.
+     */
+    public Optional<String> getTripHeadsign() {
+        return tripHeadsign;
+    }
 }

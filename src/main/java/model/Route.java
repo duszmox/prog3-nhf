@@ -3,23 +3,68 @@ package model;
 import java.awt.*;
 import java.util.Optional;
 
+/**
+ * A Route osztály egy vonalat reprezentál.
+ */
 public class Route {
-    private Optional<String> agencyId;        // Optional
-    private String routeId;                   // Required
-    private String routeShortName;            // Required
-    private Optional<String> routeLongName;   // Optional
-    private int routeType;                    // Required
-    private Optional<String> routeDesc;       // Optional
-    private Optional<String> routeColor;      // Optional (hex code, e.g., #FFFFFF)
-    private Optional<String> routeTextColor;  // Optional (hex code, e.g., #000000)
-    private Optional<Integer> routeSortOrder; // Optional
 
-    // Constructor with all fields (including optional ones)
+    /**
+     * A vonal egyedi azonosítója. Kötelező.
+     */
+    private final String routeId;
+
+    /**
+     * A vonal rövid neve. Kötelező.
+     */
+    private final String routeShortName;
+
+    /**
+     * A vonal hosszú neve. Opcionális
+     */
+    private final Optional<String> routeLongName;
+
+    /**
+     * A vonal típusa. Kötelező.
+     */
+    private final int routeType;
+
+    /**
+     * A vonal leírása. Opcionális
+     */
+    private Optional<String> routeDesc;
+
+    /**
+     * A vonal színe hex kód formátumban (pl. #FFFFFF). Opcionális
+     */
+    private Optional<String> routeColor;
+
+    /**
+     * A vonal szöveg színe hex kód formátumban (pl. #000000). Opcionális
+     */
+    private Optional<String> routeTextColor;
+
+    /**
+     * A vonal rendezési sorrendje. Opcionális
+     */
+    private Optional<Integer> routeSortOrder;
+
+    /**
+     * Konstruktor, amely minden mezőt inicializál, beleértve az opcionálisakat.
+     *
+     * @param agencyId        Az agency azonosítója.
+     * @param routeId         A vonal egyedi azonosítója.
+     * @param routeShortName  A vonal rövid neve.
+     * @param routeLongName   A vonal hosszú neve.
+     * @param routeType       A vonal típusa.
+     * @param routeDesc       A vonal leírása.
+     * @param routeColor      A vonal színe.
+     * @param routeTextColor  A vonal szöveg színe.
+     * @param routeSortOrder  A vonal rendezési sorrendje.
+     */
     public Route(Optional<String> agencyId, String routeId, String routeShortName,
                  Optional<String> routeLongName, int routeType, Optional<String> routeDesc,
                  Optional<String> routeColor, Optional<String> routeTextColor,
                  Optional<Integer> routeSortOrder) {
-        this.agencyId = agencyId;
         this.routeId = routeId;
         this.routeShortName = routeShortName;
         this.routeLongName = routeLongName;
@@ -30,44 +75,53 @@ public class Route {
         this.routeSortOrder = routeSortOrder;
     }
 
-    // Constructor with only required fields
-    public Route(String routeId, String routeShortName, int routeType) {
-        this(Optional.empty(), routeId, routeShortName, Optional.empty(), routeType,
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+    /**
+     * Visszaadja a vonal egyedi azonosítóját.
+     *
+     * @return A vonal egyedi azonosítója.
+     */
+    public String getRouteId() {
+        return routeId;
     }
 
-    // Getters and setters
-    public Optional<String> getAgencyId() { return agencyId; }
-    public void setAgencyId(Optional<String> agencyId) { this.agencyId = agencyId; }
+    /**
+     * Visszaadja a vonal rövid nevét.
+     *
+     * @return A vonal rövid neve.
+     */
+    public String getRouteShortName() {
+        return routeShortName;
+    }
 
-    public String getRouteId() { return routeId; }
-    public void setRouteId(String routeId) { this.routeId = routeId; }
+    /**
+     * Visszaadja a vonal hosszú nevét.
+     *
+     * @return A vonal hosszú neve, ha meg van adva.
+     */
+    public Optional<String> getRouteLongName() {
+        return routeLongName;
+    }
 
-    public String getRouteShortName() { return routeShortName; }
-    public void setRouteShortName(String routeShortName) { this.routeShortName = routeShortName; }
+    /**
+     * Visszaadja a vonal típusát.
+     *
+     * @return A vonal típusa.
+     */
+    public int getRouteType() {
+        return routeType;
+    }
 
-    public Optional<String> getRouteLongName() { return routeLongName; }
-    public void setRouteLongName(Optional<String> routeLongName) { this.routeLongName = routeLongName; }
-
-    public int getRouteType() { return routeType; }
-    public void setRouteType(int routeType) { this.routeType = routeType; }
-
-    public Optional<String> getRouteDesc() { return routeDesc; }
-    public void setRouteDesc(Optional<String> routeDesc) { this.routeDesc = routeDesc; }
-
-    public Optional<String> getRouteColor() { return routeColor; }
-    public void setRouteColor(Optional<String> routeColor) { this.routeColor = routeColor; }
-
+    /**
+     * Visszaadja a vonal szöveg színét Color objektumként.
+     * Ha a szöveg színe nincs megadva, alapértelmezett fehér színt használ.
+     *
+     * @return A vonal szöveg színe Color objektumként.
+     */
     public Color getColor() {
-            String cString = "#" + routeColor.orElse("FFFFFF");
-            return new Color(
-            Integer.valueOf( cString.substring( 1, 3 ), 16 ),
-            Integer.valueOf( cString.substring( 3, 5 ), 16 ),
-            Integer.valueOf( cString.substring( 5, 7 ), 16 ) ); }
-
-    public Optional<String> getRouteTextColor() { return routeTextColor; }
-    public void setRouteTextColor(Optional<String> routeTextColor) { this.routeTextColor = routeTextColor; }
-
-    public Optional<Integer> getRouteSortOrder() { return routeSortOrder; }
-    public void setRouteSortOrder(Optional<Integer> routeSortOrder) { this.routeSortOrder = routeSortOrder; }
+        String cString = "#" + routeColor.orElse("FFFFFF");
+        return new Color(
+                Integer.valueOf(cString.substring(1, 3), 16),
+                Integer.valueOf(cString.substring(3, 5), 16),
+                Integer.valueOf(cString.substring(5, 7), 16));
+    }
 }

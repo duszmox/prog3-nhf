@@ -1,8 +1,16 @@
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * A LoadingDialog osztály egy töltő ablakot jelenít meg az útvonal tervezése közben.
+ */
 public class LoadingDialog extends JDialog {
 
+    /**
+     * Konstruktor, amely inicializálja a töltő ablakot.
+     *
+     * @param parent A szülő JFrame ablak.
+     */
     public LoadingDialog(JFrame parent) {
         super(parent, "Loading..", false); // Non-modal dialog
 

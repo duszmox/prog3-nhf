@@ -2,18 +2,68 @@ package model;
 
 import java.util.Optional;
 
+/**
+ * A Stop osztály egy megállót reprezentál.
+ */
 public class Stop {
-    private String stopId;                 // Required
-    private String stopName;               // Required
-    private double stopLat;                // Required
-    private double stopLon;                // Required
-    private Optional<String> stopCode;     // Optional
-    private Optional<Integer> locationType;// Optional (0 = stop, 1 = station, etc.)
-    private Optional<String> locationSubType;  // Optional
-    private Optional<String> parentStation;    // Optional
-    private Optional<Integer> wheelchairBoarding; // Optional (0 = no info, 1 = accessible, 2 = not accessible)
+    /**
+     * A megálló egyedi azonosítója. Kötelező.
+     */
+    private String stopId;
 
-    // Constructor with required and optional fields
+    /**
+     * A megálló neve. Kötelező.
+     */
+    private String stopName;
+
+    /**
+     * A megálló szélességi koordinátája. Kötelező.
+     */
+    private double stopLat;
+
+    /**
+     * A megálló hosszúsági koordinátája. Kötelező.
+     */
+    private double stopLon;
+
+    /**
+     * A megálló kódja. Opcionális
+     */
+    private Optional<String> stopCode;
+
+    /**
+     * A helyszín típusa. Opcionális (0 = megálló, 1 = állomás, stb.).
+     */
+    private Optional<Integer> locationType;
+
+    /**
+     * A helyszín al-típusa. Opcionális
+     */
+    private Optional<String> locationSubType;
+
+    /**
+     * A szülő állomás azonosítója. Opcionális
+     */
+    private Optional<String> parentStation;
+
+    /**
+     * Információ a kerekesszékkel való megközelíthetőségről. Opcionális (0 = nincs információ, 1 = hozzáférhető, 2 = nem hozzáférhető).
+     */
+    private Optional<Integer> wheelchairBoarding;
+
+    /**
+     * Konstruktor, amely inicializálja a kötelező és opcionális mezőket.
+     *
+     * @param stopId               A megálló egyedi azonosítója.
+     * @param stopName             A megálló neve.
+     * @param stopLat              A megálló szélességi koordinátája.
+     * @param stopLon              A megálló hosszúsági koordinátája.
+     * @param stopCode             A megálló kódja.
+     * @param locationType         A helyszín típusa.
+     * @param locationSubType      A helyszín al-típusa.
+     * @param parentStation        A szülő állomás azonosítója.
+     * @param wheelchairBoarding   Információ a kerekesszékkel való megközelíthetőségről.
+     */
     public Stop(String stopId, String stopName, double stopLat, double stopLon,
                 Optional<String> stopCode, Optional<Integer> locationType,
                 Optional<String> locationSubType, Optional<String> parentStation,
@@ -29,41 +79,61 @@ public class Stop {
         this.wheelchairBoarding = wheelchairBoarding;
     }
 
-    // Constructor with only required fields
-    public Stop(String stopId, String stopName, double stopLat, double stopLon) {
-        this(stopId, stopName, stopLat, stopLon, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+    /**
+     * Visszaadja a megálló azonosítóját.
+     *
+     * @return A megálló egyedi azonosítója.
+     */
+    public String getStopId() {
+        return stopId;
     }
 
-    // Getters and setters
-    public String getStopId() { return stopId; }
-    public void setStopId(String stopId) { this.stopId = stopId; }
 
-    public String getStopName() { return stopName; }
-    public void setStopName(String stopName) { this.stopName = stopName; }
+    /**
+     * Visszaadja a megálló nevét.
+     *
+     * @return A megálló neve.
+     */
+    public String getStopName() {
+        return stopName;
+    }
 
-    public double getStopLat() { return stopLat; }
-    public void setStopLat(double stopLat) { this.stopLat = stopLat; }
 
-    public double getStopLon() { return stopLon; }
-    public void setStopLon(double stopLon) { this.stopLon = stopLon; }
+    /**
+     * Visszaadja a megálló szélességi koordinátáját.
+     *
+     * @return A megálló szélességi koordinátája.
+     */
+    public double getStopLat() {
+        return stopLat;
+    }
 
-    public Optional<String> getStopCode() { return stopCode; }
-    public void setStopCode(Optional<String> stopCode) { this.stopCode = stopCode; }
 
-    public Optional<Integer> getLocationType() { return locationType; }
-    public void setLocationType(Optional<Integer> locationType) { this.locationType = locationType; }
+    /**
+     * Visszaadja a megálló hosszúsági koordinátáját.
+     *
+     * @return A megálló hosszúsági koordinátája.
+     */
+    public double getStopLon() {
+        return stopLon;
+    }
 
-    public Optional<String> getLocationSubType() { return locationSubType; }
-    public void setLocationSubType(Optional<String> locationSubType) { this.locationSubType = locationSubType; }
+    /**
+     * Visszaadja a szülő állomás azonosítóját.
+     *
+     * @return A szülő állomás azonosítója, ha meg van adva.
+     */
+    public Optional<String> getParentStation() {
+        return parentStation;
+    }
 
-    public Optional<String> getParentStation() { return parentStation; }
-    public void setParentStation(Optional<String> parentStation) { this.parentStation = parentStation; }
-
-    public Optional<Integer> getWheelchairBoarding() { return wheelchairBoarding; }
-    public void setWheelchairBoarding(Optional<Integer> wheelchairBoarding) { this.wheelchairBoarding = wheelchairBoarding; }
-
+    /**
+     * Szöveges reprezentációja a megállónak.
+     *
+     * @return A megálló neve.
+     */
     @Override
     public String toString() {
-        return getStopName(); // Use the getter method
+        return getStopName();
     }
 }

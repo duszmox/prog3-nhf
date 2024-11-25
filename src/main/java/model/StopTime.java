@@ -3,18 +3,68 @@ package model;
 import java.time.LocalTime;
 import java.util.Optional;
 
+/**
+ * A StopTime osztály egy megálló idejét és sorrendjét reprezentálja egy utazás során.
+ */
 public class StopTime {
-    private String tripId;                           // Required
-    private String stopId;                           // Required
-    private Optional<LocalTime> arrivalTime;         // Optional (LocalTime, handles HH:MM:SS)
-    private Optional<LocalTime> departureTime;       // Optional (LocalTime, handles HH:MM:SS)
-    private int stopSequence;                        // Required
-    private Optional<String> stopHeadsign;           // Optional
-    private Optional<Integer> pickupType;            // Optional (0 = regular, 1 = no pickup, etc.)
-    private Optional<Integer> dropOffType;           // Optional (0 = regular, 1 = no drop-off, etc.)
-    private Optional<Double> shapeDistTraveled;      // Optional (distance along shape)
+    /**
+     * Az utazás egyedi azonosítója. Kötelező.
+     */
+    private String tripId;
 
-    // Constructor with all fields
+    /**
+     * A megálló egyedi azonosítója. Kötelező.
+     */
+    private String stopId;
+
+    /**
+     * Az érkezési idő. Opcionális (HH:MM:SS formátum).
+     */
+    private Optional<LocalTime> arrivalTime;
+
+    /**
+     * A távozási idő. Opcionális (HH:MM:SS formátum).
+     */
+    private Optional<LocalTime> departureTime;
+
+    /**
+     * A megálló sorrendje az utazásban. Kötelező.
+     */
+    private int stopSequence;
+
+    /**
+     * A megálló fejléce. Opcionális
+     */
+    private Optional<String> stopHeadsign;
+
+    /**
+     * A felvételi típus. Opcionális (0 = normál, 1 = nincs felvétel, stb.).
+     */
+    private Optional<Integer> pickupType;
+
+    /**
+     * A leszállítási típus. Opcionális (0 = normál, 1 = nincs leszállítás, stb.).
+     */
+    private Optional<Integer> dropOffType;
+
+    /**
+     * A megtett távolság a vonal mentén. Opcionális
+     */
+    private Optional<Double> shapeDistTraveled;
+
+    /**
+     * Konstruktor, amely minden mezőt inicializál, beleértve az opcionálisakat.
+     *
+     * @param tripId             Az utazás egyedi azonosítója.
+     * @param stopId             A megálló egyedi azonosítója.
+     * @param arrivalTime        Az érkezési idő.
+     * @param departureTime      A távozási idő.
+     * @param stopSequence       A megálló sorrendje az utazásban.
+     * @param stopHeadsign       A megálló fejléce.
+     * @param pickupType         A felvételi típus.
+     * @param dropOffType        A leszállítási típus.
+     * @param shapeDistTraveled  A megtett távolság a vonal mentén.
+     */
     public StopTime(String tripId, String stopId, Optional<LocalTime> arrivalTime, Optional<LocalTime> departureTime,
                     int stopSequence, Optional<String> stopHeadsign, Optional<Integer> pickupType,
                     Optional<Integer> dropOffType, Optional<Double> shapeDistTraveled) {
@@ -29,37 +79,49 @@ public class StopTime {
         this.shapeDistTraveled = shapeDistTraveled;
     }
 
-    // Constructor with only required fields
-    public StopTime(String tripId, String stopId, int stopSequence) {
-        this(tripId, stopId, Optional.empty(), Optional.empty(), stopSequence,
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+    /**
+     * Visszaadja az utazás azonosítóját.
+     *
+     * @return Az utazás egyedi azonosítója.
+     */
+    public String getTripId() {
+        return tripId;
     }
 
-    // Getters and setters
-    public String getTripId() { return tripId; }
-    public void setTripId(String tripId) { this.tripId = tripId; }
 
-    public String getStopId() { return stopId; }
-    public void setStopId(String stopId) { this.stopId = stopId; }
+    /**
+     * Visszaadja a megálló azonosítóját.
+     *
+     * @return A megálló egyedi azonosítója.
+     */
+    public String getStopId() {
+        return stopId;
+    }
 
-    public Optional<LocalTime> getArrivalTime() { return arrivalTime; }
-    public void setArrivalTime(Optional<LocalTime> arrivalTime) { this.arrivalTime = arrivalTime; }
+    /**
+     * Visszaadja az érkezési időt.
+     *
+     * @return Az érkezési idő, ha meg van adva.
+     */
+    public Optional<LocalTime> getArrivalTime() {
+        return arrivalTime;
+    }
 
-    public Optional<LocalTime> getDepartureTime() { return departureTime; }
-    public void setDepartureTime(Optional<LocalTime> departureTime) { this.departureTime = departureTime; }
+    /**
+     * Visszaadja a távozási időt.
+     *
+     * @return A távozási idő, ha meg van adva.
+     */
+    public Optional<LocalTime> getDepartureTime() {
+        return departureTime;
+    }
 
-    public int getStopSequence() { return stopSequence; }
-    public void setStopSequence(int stopSequence) { this.stopSequence = stopSequence; }
-
-    public Optional<String> getStopHeadsign() { return stopHeadsign; }
-    public void setStopHeadsign(Optional<String> stopHeadsign) { this.stopHeadsign = stopHeadsign; }
-
-    public Optional<Integer> getPickupType() { return pickupType; }
-    public void setPickupType(Optional<Integer> pickupType) { this.pickupType = pickupType; }
-
-    public Optional<Integer> getDropOffType() { return dropOffType; }
-    public void setDropOffType(Optional<Integer> dropOffType) { this.dropOffType = dropOffType; }
-
-    public Optional<Double> getShapeDistTraveled() { return shapeDistTraveled; }
-    public void setShapeDistTraveled(Optional<Double> shapeDistTraveled) { this.shapeDistTraveled = shapeDistTraveled; }
+    /**
+     * Visszaadja a megálló sorrendjét az utazásban.
+     *
+     * @return A megálló sorrendje.
+     */
+    public int getStopSequence() {
+        return stopSequence;
+    }
 }

@@ -5,10 +5,18 @@ import java.awt.event.*;
 import java.util.List;
 import java.util.ArrayList;
 
+/**
+ * Az AutoCompleteComboBox osztály egy automatikus kiegészítést biztosító legördülő lista a megállókhoz.
+ */
 public class AutoCompleteComboBox extends JComboBox<Stop> {
 
     private final List<Stop> items;
 
+    /**
+     * Konstruktor, amely inicializálja az input field-et.
+     *
+     * @param items A megállók listája.
+     */
     public AutoCompleteComboBox(List<Stop> items) {
         super(items.toArray(new Stop[0]));
         this.items = items;
@@ -16,12 +24,15 @@ public class AutoCompleteComboBox extends JComboBox<Stop> {
         configureAutoComplete();
     }
 
+    /**
+     * Az input field konfigurálása.
+     */
     private void configureAutoComplete() {
         JTextField textField = (JTextField) getEditor().getEditorComponent();
         textField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
-                // Ignore navigation keys
+                // Navigációs billentyűk figyelmen kívül hagyása, hogy lehessen velük lefele/felfele menni a listában.
                 switch (e.getKeyCode()) {
                     case KeyEvent.VK_UP:
                     case KeyEvent.VK_DOWN:

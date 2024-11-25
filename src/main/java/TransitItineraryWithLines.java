@@ -12,22 +12,32 @@ import java.util.Objects;
 import model.Route;
 import model.Trip;
 
+/**
+ * A TransitItineraryWithLines osztály megjeleníti az utazási tervet grafikus felületen, vonalakkal és részletekkel.
+ */
 public class TransitItineraryWithLines extends JFrame {
     private final Map<String, Route> routeMap;
     private List<TripPlanLeg> tripPlan;
     private final Map<String, Trip> tripMap;
     private final List<TripPlanLeg> originalTripPlan;
-    List<Integer> numberOfStops  = new ArrayList<>();
+    List<Integer> numberOfStops = new ArrayList<>();
 
     private boolean expanded = false;
 
+    /**
+     * Konstruktor, amely inicializálja az ablakot és megjeleníti az utazási tervet.
+     *
+     * @param tripPlan Az utazási terv lépései.
+     * @param routeMap Útvonalak map-je azonosító alapján.
+     * @param tripMap  Utazások map-je azonosító alapján.
+     */
     public TransitItineraryWithLines(List<TripPlanLeg> tripPlan, Map<String, Route> routeMap, Map<String, Trip> tripMap) {
-        this.originalTripPlan = new ArrayList<>(tripPlan); // Copy original list
+        this.originalTripPlan = new ArrayList<>(tripPlan); // Eredeti lista másolása
         this.routeMap = routeMap;
-        this.tripPlan = new ArrayList<>(tripPlan); // Work on a modifiable list
+        this.tripPlan = new ArrayList<>(tripPlan); // Módosítható lista
         this.tripMap = tripMap;
 
-        setTitle("Transit Itinerary");
+        setTitle("Trip plan");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(500, 600);
         setLocationRelativeTo(null);
@@ -35,7 +45,7 @@ public class TransitItineraryWithLines extends JFrame {
         ImageIcon img = new ImageIcon("icon.png");
         setIconImage(img.getImage());
 
-        // Set up the menu bar
+        // Menü sáv beállítása
         setUpMenuBar();
 
         JPanel mainPanel = new JPanel();
@@ -51,12 +61,15 @@ public class TransitItineraryWithLines extends JFrame {
         setVisible(true);
     }
 
+    /**
+     * Menü sáv inicializálása.
+     */
     private void setUpMenuBar() {
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
 
         JMenuItem backMenuItem = new JMenuItem("Back");
-        backMenuItem.addActionListener(_ -> dispose()); // Close the window
+        backMenuItem.addActionListener(_ -> dispose()); // Ablak bezárása
         fileMenu.add(backMenuItem);
 
         JMenuItem exportMenuItem = new JMenuItem("Export to TXT");
@@ -67,18 +80,23 @@ public class TransitItineraryWithLines extends JFrame {
         setJMenuBar(menuBar);
     }
 
+    /**
+     * A komponensek megjelenítése a fő panelen.
+     *
+     * @param mainPanel A fő panel.
+     */
     private void renderComponents(JPanel mainPanel) {
-        // Create a panel for the back button at the top
+        // Vissza gomb panel a tetején
         JPanel backButtonPanelTop = new JPanel();
         backButtonPanelTop.setLayout(new BoxLayout(backButtonPanelTop, BoxLayout.X_AXIS));
         backButtonPanelTop.setBackground(Color.WHITE);
         backButtonPanelTop.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
-        // Add back button at the top right
+        // Vissza gomb hozzáadása
         JButton backButtonTop = new JButton("Back");
         backButtonTop.setAlignmentX(Component.LEFT_ALIGNMENT);
         backButtonTop.addActionListener(_ -> {
-            dispose(); // Close the window
+            dispose(); // Ablak bezárása
         });
         backButtonPanelTop.add(Box.createHorizontalGlue());
         backButtonPanelTop.add(backButtonTop);
@@ -94,7 +112,7 @@ public class TransitItineraryWithLines extends JFrame {
         backButtonPanelTop.add(Box.createHorizontalGlue());
         backButtonPanelTop.add(expandButtonTop);
 
-        // Add export button at the top right
+        // Export gomb hozzáadása
         JButton exportButton = new JButton("Export to TXT");
         exportButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
         exportButton.addActionListener(_ -> exportTripPlanToTxt());
@@ -103,74 +121,72 @@ public class TransitItineraryWithLines extends JFrame {
 
         mainPanel.add(backButtonPanelTop);
 
-        // Define fixed widths for Time and Line sections
+        // Fix szélességek beállítása
         int timeWidth = 60;
-        int lineWidth = 30; // Fixed width for the line component
-        int spacerWidth = 10; // Spacer between line and details
+        int lineWidth = 30;
+        int spacerWidth = 10;
 
         List<TripPlanLeg> filteredTripPlanLegs = new ArrayList<>();
         numberOfStops.clear();
 
         if (!expanded) {
-            // Reset tripPlan to a copy of the original list
+            // Utazási terv resetelése az eredeti listára
             tripPlan = new ArrayList<>(originalTripPlan);
-            // Filter and combine durations
 
+            // Szűrés és időtartamok kombinálása
             for (TripPlanLeg tripPlanLeg : tripPlan) {
                 TripPlanLeg prevLeg = null;
                 Integer numberOfStop = 0;
 
                 if (!filteredTripPlanLegs.isEmpty()) {
-                    prevLeg = filteredTripPlanLegs.getLast();
-                    numberOfStop = numberOfStops.getLast();
+                    prevLeg = filteredTripPlanLegs.get(filteredTripPlanLegs.size() - 1);
+                    numberOfStop = numberOfStops.get(numberOfStops.size() - 1);
                 }
 
                 boolean hidable = prevLeg != null && Objects.equals(prevLeg.getTripId(), tripPlanLeg.getTripId());
                 if (hidable) {
-                    // Combine durations and distances, but create a new instance to avoid modifying the original data
+                    // Időtartamok és távolságok kombinálása
                     TripPlanLeg combinedLeg = new TripPlanLeg(prevLeg);
                     combinedLeg.setDuration(prevLeg.getDuration() + tripPlanLeg.getDuration());
                     combinedLeg.setDistance(prevLeg.getDistance() + tripPlanLeg.getDistance());
 
-                    // Replace the previous leg in the filtered list with the combined leg
+                    // Előző szakasz cseréje a kombinált szakaszra
                     filteredTripPlanLegs.set(filteredTripPlanLegs.size() - 1, combinedLeg);
                     numberOfStops.set(numberOfStops.size() - 1, numberOfStop + 1);
                 } else {
-                    // Add the new leg to the filtered list
+                    // Új szakasz hozzáadása
                     filteredTripPlanLegs.add(new TripPlanLeg(tripPlanLeg));
                     numberOfStops.add(1);
                 }
             }
 
-
             tripPlan = filteredTripPlanLegs;
             renderStopPanels(mainPanel, timeWidth, lineWidth, spacerWidth, tripPlan);
         } else {
-            // Expanded view restores original durations
+            // Kibontott nézet
             tripPlan = new ArrayList<>(originalTripPlan);
-            for (TripPlanLeg _ : tripPlan) {
+            for (TripPlanLeg ignored : tripPlan) {
                 numberOfStops.add(1);
             }
             renderStopPanels(mainPanel, timeWidth, lineWidth, spacerWidth, originalTripPlan);
         }
 
-
-        // Render final stop
+        // Végső megálló megjelenítése
         TripPlanLeg lastLeg = tripPlan.getLast();
         JPanel finalStopPanel = createFinalStopPanel(lastLeg, timeWidth, lineWidth, spacerWidth);
         mainPanel.add(finalStopPanel);
 
-        // Create a panel for the back button at the bottom
+        // Vissza gomb panel alul
         JPanel backButtonPanelBottom = new JPanel();
         backButtonPanelBottom.setLayout(new BoxLayout(backButtonPanelBottom, BoxLayout.X_AXIS));
         backButtonPanelBottom.setBackground(Color.WHITE);
         backButtonPanelBottom.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
-        // Add back button at the bottom right
+        // Vissza gomb hozzáadása alul
         JButton backButtonBottom = new JButton("Back");
         backButtonBottom.setAlignmentX(Component.RIGHT_ALIGNMENT);
         backButtonBottom.addActionListener(_ -> {
-            dispose(); // Close the window
+            dispose(); // Ablak bezárása
         });
         backButtonPanelBottom.add(Box.createHorizontalGlue());
         backButtonPanelBottom.add(backButtonBottom);
@@ -178,17 +194,9 @@ public class TransitItineraryWithLines extends JFrame {
         mainPanel.add(backButtonPanelBottom);
     }
 
-    private void renderStopPanels(JPanel mainPanel, int timeWidth, int lineWidth, int spacerWidth, List<TripPlanLeg> tripPlan) {
-        for (int i = 0; i < tripPlan.size(); i++) {
-            TripPlanLeg leg = tripPlan.get(i);
-            Integer nof =  numberOfStops.get(i);
-
-            // Create and add the panel for each leg
-            JPanel legPanel = createStopPanel(leg, timeWidth, lineWidth, spacerWidth, nof);
-            mainPanel.add(legPanel);
-        }
-    }
-
+    /**
+     * Az utazási terv exportálása TXT fájlba.
+     */
     private void exportTripPlanToTxt() {
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("trip_plan.txt"))) {
@@ -207,9 +215,9 @@ public class TransitItineraryWithLines extends JFrame {
                     writer.write("|-- (" + routeShortName + " ▶ " + toStopName + ") ");
                     if (!expanded) {
                         int nos = numberOfStops.get(i);
-                        writer.write(nos + (nos == 1 ? " stop- " : " stops- "));
+                        writer.write(nos + (nos == 1 ? " stop - " : " stops - "));
                     }
-                    writer.write(durationMinutes + " Minutes\n");
+                    writer.write(durationMinutes + " min\n");
                     writer.write("|\n");
                 } else if (leg.getLegType() == TripPlanLeg.LegType.WALK) {
                     String fromStopName = leg.getFromStop().getStopName();
@@ -218,94 +226,121 @@ public class TransitItineraryWithLines extends JFrame {
                     long durationMinutes = leg.getDuration() / 60;
                     writer.write("O- " + fromStopName + " - " + startTime + "\n");
                     writer.write("|\n");
-                    writer.write("|-- " + durationMinutes + " minute walk (" + String.format("%.0f m", distance) + ")\n");
+                    writer.write("|-- " + durationMinutes + " min walk (" + String.format("%.0f m", distance) + ")\n");
                     writer.write("|\n");
                 } else if (leg.getLegType() == TripPlanLeg.LegType.TRANSFER) {
                     String fromStopName = leg.getFromStop().getStopName();
                     String startTime = leg.getStartTime().format(timeFormatter);
                     writer.write("O- " + fromStopName + " - " + startTime + "\n");
                     writer.write("|\n");
-                    writer.write("|-- Transfer - " + (leg.getDuration() / 60) + " minute wait\n");
+                    writer.write("|-- Transfer - " + (leg.getDuration() / 60) + " min wait\n");
                     writer.write("|\n");
                 }
             }
-            // Write the final destination stop
-            TripPlanLeg lastLeg = tripPlan.getLast();
+            // Végső megálló írása
+            TripPlanLeg lastLeg = tripPlan.get(tripPlan.size() - 1);
             String finalStopName = lastLeg.getToStop().getStopName();
             String endTime = lastLeg.getEndTime().format(timeFormatter);
-            writer.write("O-" + finalStopName + " - " + endTime + "\n");
+            writer.write("O- " + finalStopName + " - " + endTime + "\n");
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error exporting trip plan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error during trip planning: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+    /**
+     * A megálló panelek renderelése.
+     *
+     * @param mainPanel  A fő panel.
+     * @param timeWidth  Az idő oszlop szélessége.
+     * @param lineWidth  A vonal oszlop szélessége.
+     * @param spacerWidth A spacer szélessége.
+     * @param tripPlan   Az utazási terv.
+     */
+    private void renderStopPanels(JPanel mainPanel, int timeWidth, int lineWidth, int spacerWidth, List<TripPlanLeg> tripPlan) {
+        for (int i = 0; i < tripPlan.size(); i++) {
+            TripPlanLeg leg = tripPlan.get(i);
+            Integer nof = numberOfStops.get(i);
+
+            // Panel létrehozása minden szakaszhoz
+            JPanel legPanel = createStopPanel(leg, timeWidth, lineWidth, spacerWidth, nof);
+            mainPanel.add(legPanel);
+        }
+    }
+
+    /**
+     * Megálló panel létrehozása egy adott szakaszhoz.
+     *
+     * @param leg         Az utazási szakasz.
+     * @param timeWidth   Az idő oszlop szélessége.
+     * @param lineWidth   A vonal oszlop szélessége.
+     * @param spacerWidth A spacer szélessége.
+     * @param numberOfStops Megállók száma.
+     * @return A létrehozott panel.
+     */
     private JPanel createStopPanel(TripPlanLeg leg, int timeWidth, int lineWidth, int spacerWidth, int numberOfStops) {
         JPanel stopPanel = createBasePanel();
 
-        // Time label
+        // Idő címke
         String time = leg.getStartTime().format(DateTimeFormatter.ofPattern("HH:mm"));
         JLabel timeLabel = createTimeLabel(time, timeWidth);
         stopPanel.add(timeLabel);
 
-        // Spacer between time and line
+        // Spacer
         stopPanel.add(Box.createRigidArea(new Dimension(spacerWidth, 0)));
 
-        // Line component inside a vertical box to align multiple lines
+        // Vonal komponens
         JPanel lineContainer = createLineContainer(lineWidth, new LineComponent(leg, false));
         stopPanel.add(lineContainer);
 
-        // Spacer between line and details
+        // Távtartó
         stopPanel.add(Box.createRigidArea(new Dimension(spacerWidth, 0)));
 
-        // Details panel
+        // Részletek panel
         JPanel detailsPanel = createDetailsPanel(leg, numberOfStops);
         stopPanel.add(detailsPanel);
 
         return stopPanel;
     }
 
+    /**
+     * Végső megálló panel létrehozása.
+     *
+     * @param leg         Az utolsó szakasz.
+     * @param timeWidth   Az idő oszlop szélessége.
+     * @param lineWidth   A vonal oszlop szélessége.
+     * @param spacerWidth A spacer szélessége.
+     * @return A létrehozott panel.
+     */
     private JPanel createFinalStopPanel(TripPlanLeg leg, int timeWidth, int lineWidth, int spacerWidth) {
         JPanel stopPanel = createBasePanel();
 
-        // Time label (end time)
+        // Idő címke (befejezési idő)
         String time = leg.getEndTime().format(DateTimeFormatter.ofPattern("HH:mm"));
         JLabel timeLabel = createTimeLabel(time, timeWidth);
         stopPanel.add(timeLabel);
 
-        // Spacer between time and line
+        // Távtartó
         stopPanel.add(Box.createRigidArea(new Dimension(spacerWidth, 0)));
 
-        // Line component (only top part since it's the last stop)
+        // Vonal komponens (csak felső rész)
         JPanel lineContainer = createLineContainer(lineWidth, new LineComponent(null, true));
         stopPanel.add(lineContainer);
 
-        // Spacer between line and details
+        // Spacer
         stopPanel.add(Box.createRigidArea(new Dimension(spacerWidth, 0)));
 
-        // Details panel
+        // Részletek panel
         JPanel detailsPanel = getEndStopDetailsPanel(leg);
         stopPanel.add(detailsPanel);
 
         return stopPanel;
     }
 
-    private static JPanel getEndStopDetailsPanel(TripPlanLeg leg) {
-        JPanel detailsPanel = new JPanel();
-        detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
-        detailsPanel.setBackground(Color.WHITE);
-        detailsPanel.setAlignmentY(Component.TOP_ALIGNMENT);
-        detailsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-
-        // Final stop name
-        String stopName = leg.getToStop().getStopName();
-        JLabel stopLabel = new JLabel(stopName);
-        stopLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        stopLabel.setAlignmentY(Component.BOTTOM_ALIGNMENT);
-
-        detailsPanel.add(stopLabel);
-        return detailsPanel;
-    }
-
+    /**
+     * Alap panel létrehozása.
+     *
+     * @return Az alap panel.
+     */
     private JPanel createBasePanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
@@ -314,6 +349,13 @@ public class TransitItineraryWithLines extends JFrame {
         return panel;
     }
 
+    /**
+     * Idő címke létrehozása.
+     *
+     * @param time      Az idő szövege.
+     * @param timeWidth Az idő címke szélessége.
+     * @return Az idő címke.
+     */
     private JLabel createTimeLabel(String time, int timeWidth) {
         JLabel timeLabel = new JLabel(time);
         timeLabel.setFont(new Font("Arial", Font.BOLD, 14));
@@ -324,6 +366,13 @@ public class TransitItineraryWithLines extends JFrame {
         return timeLabel;
     }
 
+    /**
+     * Vonal konténer létrehozása.
+     *
+     * @param lineWidth     A vonal szélessége.
+     * @param lineComponent A vonal komponens.
+     * @return A vonal konténer.
+     */
     private JPanel createLineContainer(int lineWidth, LineComponent lineComponent) {
         JPanel lineContainer = new JPanel();
         lineContainer.setLayout(new BoxLayout(lineContainer, BoxLayout.Y_AXIS));
@@ -336,6 +385,13 @@ public class TransitItineraryWithLines extends JFrame {
         return lineContainer;
     }
 
+    /**
+     * Részletek panel létrehozása.
+     *
+     * @param leg           Az utazási szakasz.
+     * @param numberOfStops Megállók száma.
+     * @return A részletek panel.
+     */
     private JPanel createDetailsPanel(TripPlanLeg leg, int numberOfStops) {
         JPanel detailsPanel = new JPanel();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
@@ -343,13 +399,13 @@ public class TransitItineraryWithLines extends JFrame {
         detailsPanel.setAlignmentY(Component.TOP_ALIGNMENT);
         detailsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
 
-        // Stop name
+        // Megálló neve
         String stopName = leg.getFromStop().getStopName();
         JLabel stopLabel = new JLabel(stopName);
         stopLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         stopLabel.setAlignmentY(Component.TOP_ALIGNMENT);
 
-        // Transport details
+        // Közlekedési részletek
         String transport = getTransportDetails(leg, numberOfStops);
         JLabel transportLabel = new JLabel(transport);
         transportLabel.setFont(new Font("Arial", Font.ITALIC, 12));
@@ -361,6 +417,36 @@ public class TransitItineraryWithLines extends JFrame {
         return detailsPanel;
     }
 
+    /**
+     * Végső megálló részleteinek panelje.
+     *
+     * @param leg Az utolsó szakasz.
+     * @return A részletek panel.
+     */
+    private static JPanel getEndStopDetailsPanel(TripPlanLeg leg) {
+        JPanel detailsPanel = new JPanel();
+        detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
+        detailsPanel.setBackground(Color.WHITE);
+        detailsPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        detailsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+
+        // Végső megálló neve
+        String stopName = leg.getToStop().getStopName();
+        JLabel stopLabel = new JLabel(stopName);
+        stopLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        stopLabel.setAlignmentY(Component.BOTTOM_ALIGNMENT);
+
+        detailsPanel.add(stopLabel);
+        return detailsPanel;
+    }
+
+    /**
+     * Közlekedési részletek lekérése egy szakaszhoz.
+     *
+     * @param leg           Az utazási szakasz.
+     * @param numberOfStops Megállók száma.
+     * @return A közlekedési részletek szövege.
+     */
     private String getTransportDetails(TripPlanLeg leg, int numberOfStops) {
         String transport;
         String details;
@@ -371,11 +457,11 @@ public class TransitItineraryWithLines extends JFrame {
                 durationMinutes = leg.getDuration() / 60;
                 details = durationMinutes + " min";
                 if (numberOfStops != 1) {
-                    details += ", " + numberOfStops + " stops ";
+                    details += ", " + numberOfStops + " stops";
                 }
                 break;
             case WALK:
-                transport = "Walking";
+                transport = "Walk";
                 durationMinutes = leg.getDuration() / 60;
                 details = durationMinutes + " min, " + String.format("%.0f m", leg.getDistance());
                 break;
@@ -390,12 +476,14 @@ public class TransitItineraryWithLines extends JFrame {
                 details = durationMinutes + " min wait";
                 break;
             default:
-                throw new IllegalStateException("Unexpected value: " + leg.getLegType());
+                throw new IllegalStateException("Unexpected Value: " + leg.getLegType());
         }
         return transport + " - " + details;
     }
 
-
+    /**
+     * Vonal komponens, ami megrajzolja a vonalat a panelen.
+     */
     private class LineComponent extends JPanel {
         private final TripPlanLeg leg;
         private final boolean isLastLeg;
@@ -422,7 +510,7 @@ public class TransitItineraryWithLines extends JFrame {
 
             if (leg != null) {
                 if (leg.getLegType() == TripPlanLeg.LegType.WALK) {
-                    // Dotted line for walking
+                    // Szaggatott vonal gyaloglás esetén
                     float[] dashPattern = {5, 5};
                     g2.setStroke(new BasicStroke(3, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, dashPattern, 0));
                     g2.setColor(Color.GRAY);
@@ -434,19 +522,18 @@ public class TransitItineraryWithLines extends JFrame {
                         g2.setColor(Color.GRAY);
                     }
                 } else if (leg.getLegType() == TripPlanLeg.LegType.TRANSFER) {
-                    // Dashed line for transfer
+                    // Szaggatott vonal átszállás esetén
                     float[] dashPattern = {10, 10};
                     g2.setStroke(new BasicStroke(3, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, dashPattern, 0));
                     g2.setColor(Color.ORANGE);
-                }
-                else if (leg.getLegType() == TripPlanLeg.LegType.WAIT) {
-                    // Dashed line for transfer
+                } else if (leg.getLegType() == TripPlanLeg.LegType.WAIT) {
+                    // Szaggatott vonal várakozás esetén
                     float[] dashPattern = {10, 10};
                     g2.setStroke(new BasicStroke(3, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, dashPattern, 0));
-                    g2.setColor(Color.blue);
+                    g2.setColor(Color.BLUE);
                 }
             } else {
-                // Default line for final stop
+                // Alapértelmezett vonal a végső megállóhoz
                 g2.setStroke(new BasicStroke(3));
                 g2.setColor(Color.GRAY);
             }
@@ -455,6 +542,12 @@ public class TransitItineraryWithLines extends JFrame {
         }
     }
 
+    /**
+     * Közlekedési mód nevének lekérése útvonal azonosító alapján.
+     *
+     * @param routeId Az útvonal azonosítója.
+     * @return A közlekedési mód neve.
+     */
     private String getTransportModeName(String routeId) {
         Route route = routeMap.get(routeId);
         if (route != null) {

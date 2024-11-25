@@ -7,6 +7,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+/**
+ * A TripPlanner osztály felelős az optimális útvonal megtalálásáért két megálló között.
+ */
 public class TripPlanner {
 
     final List<Stop> stops;
@@ -15,7 +18,15 @@ public class TripPlanner {
     final List<Trip> trips;
     final List<Route> routes;
 
-    // Constructor
+    /**
+     * Konstruktor, amely inicializálja az utazástervezőt a szükséges adatokkal.
+     *
+     * @param stops     A megállók listája.
+     * @param stopTimes A megállóidők listája.
+     * @param pathways  Az aluljárók listája.
+     * @param trips     A járatok listája.
+     * @param routes    A vonalak listája.
+     */
     public TripPlanner(List<Stop> stops, List<StopTime> stopTimes, List<Pathway> pathways, List<Trip> trips, List<Route> routes) {
         this.stops = stops;
         this.stopTimes = stopTimes;
@@ -24,22 +35,35 @@ public class TripPlanner {
         this.routes = routes;
     }
 
-    // Main function to find the optimal path
+    /**
+     * Megkeresi az optimális útvonalat két megálló között adott dátumon és időben.
+     *
+     * @param startStopId   Az induló megálló azonosítója.
+     * @param endStopId     Az érkező megálló azonosítója.
+     * @param date          A dátum.
+     * @param departureTime Az indulási idő.
+     * @return Az utazási terv lépéseinek listája.
+     */
     public List<TripPlanLeg> findOptimalPath(String startStopId, String endStopId, LocalDate date, LocalTime departureTime) {
-        // Step 1: Filter trips operating on the given date
+        // 1. lépés: Az adott dátumon közlekedő járatok szűrése
         Set<String> activeTripIds = getActiveTripIds(date);
 
-        // Step 2: Limit stop times to a time window
+        // 2. lépés: A megállóidők szűrése egy időablakra
         List<StopTime> filteredStopTimes = filterStopTimes(activeTripIds, departureTime);
 
-        // Step 3: Build the graph
+        // 3. lépés: A gráf felépítése
         Map<String, List<Edge>> graph = buildGraph(filteredStopTimes, startStopId, endStopId);
 
-        // Step 4: Run the shortest path algorithm with transfer limit
+        // 4. lépés: A legrövidebb út algoritmus futtatása
         return shortestPath(graph, startStopId, endStopId, departureTime);
     }
 
-    // Function to get active trip IDs on the given date
+    /**
+     * Lekéri az aktív járatok azonosítóit adott dátumon.
+     *
+     * @param date A dátum.
+     * @return Az aktív járatok azonosítóinak halmaza.
+     */
     Set<String> getActiveTripIds(LocalDate date) {
         Set<String> activeTripIds = new HashSet<>();
         for (Trip trip : trips) {
@@ -50,10 +74,16 @@ public class TripPlanner {
         return activeTripIds;
     }
 
-    // Function to filter stop times within a time window
+    /**
+     * Szűri a megállóidőket egy adott időablakra.
+     *
+     * @param activeTripIds   Az aktív járatok azonosítói.
+     * @param departureTime   Az indulási idő.
+     * @return A szűrt megállóidők listája.
+     */
     List<StopTime> filterStopTimes(Set<String> activeTripIds, LocalTime departureTime) {
         List<StopTime> filteredStopTimes = new ArrayList<>();
-        LocalTime endTime = departureTime.plusHours(2); // 2-hour window
+        LocalTime endTime = departureTime.plusHours(2); // 2 órás ablak
 
         for (StopTime stopTime : stopTimes) {
             if (activeTripIds.contains(stopTime.getTripId())) {
@@ -69,11 +99,19 @@ public class TripPlanner {
         return filteredStopTimes;
     }
 
+    /**
+     * A gráf felépítése az adott megállóidőkből.
+     *
+     * @param filteredStopTimes A szűrt megállóidők.
+     * @param startStopId       Az induló megálló azonosítója.
+     * @param endStopId         Az érkező megálló azonosítója.
+     * @return A gráf, ahol a csomópontok megállók és az élek a megállóidők, séta lehetőségek és aluljárók.
+     */
     Map<String, List<Edge>> buildGraph(List<StopTime> filteredStopTimes, String startStopId, String endStopId) {
 
         Map<String, List<Edge>> graph = Collections.synchronizedMap(new HashMap<>());
 
-        // Initialize graph nodes
+        // Gráf csomópontjainak inicializálása
         stops.parallelStream().forEach(stop -> graph.put(stop.getStopId(), Collections.synchronizedList(new ArrayList<>())));
 
         addStopTimeEdges(filteredStopTimes, graph);
@@ -85,8 +123,14 @@ public class TripPlanner {
         return graph;
     }
 
+    /**
+     * Élek hozzáadása a gráfhoz a megállóidőkből.
+     *
+     * @param filteredStopTimes A szűrt megállóidők.
+     * @param graph             A gráf.
+     */
     static void addStopTimeEdges(List<StopTime> filteredStopTimes, Map<String, List<Edge>> graph) {
-        // Build edges from stop times (scheduled transit)
+        // Élek felépítése a megállóidőkből
         Map<String, List<StopTime>> stopTimesByTrip = new HashMap<>();
         filteredStopTimes.forEach(stopTime ->
                 stopTimesByTrip.computeIfAbsent(stopTime.getTripId(), _ -> new ArrayList<>()).add(stopTime)
@@ -102,13 +146,13 @@ public class TripPlanner {
                     String fromStopId = currentStopTime.getStopId();
                     String toStopId = nextStopTime.getStopId();
 
-                    // Calculate travel time in seconds
+                    // Utazási idő kiszámítása másodpercekben
                     long travelTime = Duration.between(
                             currentStopTime.getDepartureTime().get(),
                             nextStopTime.getArrivalTime().get()
                     ).getSeconds();
 
-                    // Create an edge
+                    // Él létrehozása
                     Edge edge = new Edge(toStopId, travelTime, EdgeType.TRANSIT, currentStopTime.getDepartureTime().get(), currentStopTime.getTripId());
                     graph.get(fromStopId).add(edge);
                 }
@@ -116,18 +160,22 @@ public class TripPlanner {
         });
     }
 
+    /**
+     * Útvonalak hozzáadása a gráfhoz az aluljáró adatokból.
+     *
+     * @param graph A gráf.
+     */
     void addPathWayEdges(Map<String, List<Edge>> graph) {
-        // Add pathway edges
         pathways.parallelStream().forEach(pathway -> {
             String fromStopId = pathway.getFromStopId();
             String toStopId = pathway.getToStopId();
             long traversalTime = pathway.getTraversalTime().orElse(0);
 
-            // Create an edge
+            // Él létrehozása
             Edge edge = new Edge(toStopId, traversalTime, EdgeType.PATHWAY, null, null);
             graph.get(fromStopId).add(edge);
 
-            // If bidirectional, add the reverse edge
+            // Ha kétirányú, akkor a fordított él hozzáadása
             if (pathway.getIsBidirectional() == 1) {
                 Edge reverseEdge = new Edge(fromStopId, traversalTime, EdgeType.PATHWAY, null, null);
                 graph.get(toStopId).add(reverseEdge);
@@ -135,8 +183,15 @@ public class TripPlanner {
         });
     }
 
+    /**
+     * Séta élek hozzáadása a gráfhoz a közeli megállók között.
+     *
+     * @param startStopId Az induló megálló azonosítója.
+     * @param endStopId   Az érkező megálló azonosítója.
+     * @param graph       A gráf.
+     */
     void addWalkEdges(String startStopId, String endStopId, Map<String, List<Edge>> graph) {
-        // Build walking edges between stops within 500 meters of start and end stops
+        // Gyalogló élek létrehozása a 3000 méteren belüli megállók között
         Set<String> relevantStopIds = getRelevantStopIds(startStopId, endStopId);
 
         relevantStopIds.parallelStream().forEach(stopIdA -> {
@@ -151,7 +206,7 @@ public class TripPlanner {
                             stopB.getStopLat(), stopB.getStopLon()
                     );
                     if (distance <= 3000) {
-                        // Estimate walking time (average speed 5 km/h)
+                        // Séta idő becslése (átlagos sebesség 5 km/h)
                         long walkingTime = (long) (((distance / 1000) / 5 * 3600));
                         Edge edge = new Edge(stopIdB, walkingTime, EdgeType.WALK, null, null);
                         graph.get(stopIdA).add(edge);
@@ -161,9 +216,15 @@ public class TripPlanner {
         });
     }
 
-    // Function to get relevant stop IDs (stops within 3 kilometers of start and end stops)
+    /**
+     * Releváns megállóazonosítók lekérése (megállók a kezdő és végállomás 3 kilométeres körzetében).
+     *
+     * @param startStopId Az induló megálló azonosítója.
+     * @param endStopId   Az érkező megálló azonosítója.
+     * @return A releváns megállóazonosítók halmaza.
+     */
     private Set<String> getRelevantStopIds(String startStopId, String endStopId) {
-        Set<String> relevantStopIds = ConcurrentHashMap.newKeySet(); // Thread-safe set for parallel operations
+        Set<String> relevantStopIds = ConcurrentHashMap.newKeySet();
         relevantStopIds.add(startStopId);
         relevantStopIds.add(endStopId);
 
@@ -192,7 +253,12 @@ public class TripPlanner {
         return relevantStopIds;
     }
 
-    // Helper function to get model.Stop by ID
+    /**
+     * Egy megálló objektum lekérése azonosító alapján.
+     *
+     * @param stopId A megálló azonosítója.
+     * @return A megálló objektum vagy null, ha nem található.
+     */
     private Stop getStopById(String stopId) {
         for (Stop stop : stops) {
             if (stop.getStopId().equals(stopId)) {
@@ -202,7 +268,15 @@ public class TripPlanner {
         return null;
     }
 
-    // Shortest path algorithm with transfer limit and detailed leg information
+    /**
+     * Legrövidebb út algoritmus futtatása az útvonal megtalálásához.
+     *
+     * @param graph          A gráf.
+     * @param startStopId    Az induló megálló azonosítója.
+     * @param endStopId      Az érkező megálló azonosítója.
+     * @param departureTime  Az indulási idő.
+     * @return Az utazási terv lépéseinek listája.
+     */
     private List<TripPlanLeg> shortestPath(Map<String, List<Edge>> graph, String startStopId, String endStopId, LocalTime departureTime) {
         PriorityQueue<NodeEntry> queue = new PriorityQueue<>(Comparator.comparingLong(ne -> ne.earliestArrivalTime));
         queue.add(new NodeEntry(startStopId, departureTime.toSecondOfDay(), null, 0, null, null, 0));
@@ -233,24 +307,24 @@ public class TripPlanner {
                         long waitTimeOn = edge.departureTime.toSecondOfDay() - current.earliestArrivalTime;
 
                         if (sameTrip) {
-                            // Continue on the same trip without transfer
+                            // Ugyanazon az járaton folytatás
                             arrivalTimeAtNeighbor = edge.departureTime.toSecondOfDay() + edge.travelTime;
                         } else {
-                            // Enforce transfer time constraints
-                            if (waitTimeOn >= 60 && waitTimeOn <= 1200) { // Between 1 and 20 minutes
+                            // Átszállási időkorlátok betartása
+                            if (waitTimeOn >= 60 && waitTimeOn <= 1200) { // 1 és 20 perc között
                                 arrivalTimeAtNeighbor = edge.departureTime.toSecondOfDay() + edge.travelTime;
                                 transfers += 1;
                                 currentTripId = edge.tripId;
                                 waitTime = waitTimeOn;
                             } else {
-                                continue; // Cannot make this transfer
+                                continue; // Nem lehet átszállni
                             }
                         }
                     } else {
-                        continue; // Invalid departure time
+                        continue; // Érvénytelen indulási idő
                     }
                 } else {
-                    // For WALK and PATHWAY edges
+                    // Séta és járat élek esetén
                     arrivalTimeAtNeighbor = current.earliestArrivalTime + edge.travelTime;
                     if (currentTripId != null) {
                         transfers += 1;
@@ -267,16 +341,16 @@ public class TripPlanner {
             }
         }
 
-        // Reconstruct the path
+        // Útvonal visszafejtése
         List<TripPlanLeg> tripPlan = new ArrayList<>();
         NodeEntry currentNode = previousNodes.get(endStopId);
 
         if (currentNode == null) {
-            System.out.println("No available path found.");
+            System.out.println("Nem található elérhető útvonal.");
             return new ArrayList<>();
         }
 
-        // Reconstruct the path in reverse order
+        // Útvonal visszafelé történő összeállítása
         List<NodeEntry> pathNodes = new ArrayList<>();
         while (currentNode.previousNode != null) {
             pathNodes.add(currentNode);
@@ -284,13 +358,17 @@ public class TripPlanner {
         }
         Collections.reverse(pathNodes);
 
-        // Generate trip plan from the path
         buildTripPlanFromPath(pathNodes, tripPlan);
 
         return tripPlan;
     }
 
-    // Helper function to build the trip plan from path nodes
+    /**
+     * Segédfüggvény az utazási terv összeállításához a csomópontokból.
+     *
+     * @param pathNodes Az útvonal csomópontjai.
+     * @param tripPlan  Az utazási terv, amelybe a lépéseket hozzáadjuk.
+     */
     private void buildTripPlanFromPath(List<NodeEntry> pathNodes, List<TripPlanLeg> tripPlan) {
         Map<String, Stop> stopMap = stops.parallelStream().collect(Collectors.toConcurrentMap(Stop::getStopId, stop -> stop));
         Map<String, Trip> tripMap = trips.parallelStream().collect(Collectors.toConcurrentMap(Trip::getTripId, trip -> trip));
@@ -346,7 +424,7 @@ public class TripPlanner {
                     );
                 }
             } else {
-                legType = TripPlanLeg.LegType.WALK; // Default to WALK for other types
+                legType = TripPlanLeg.LegType.WALK; //Backupnak itt a WALK
             }
 
             if (node.waitTimeBefore > 0) {
@@ -380,15 +458,25 @@ public class TripPlanner {
         }
     }
 
-
-    // Edge class to represent connections between stops
+    /**
+     * Az él osztály a megállók közötti kapcsolatokat reprezentálja.
+     */
     static class Edge {
         String toStopId;
-        long travelTime; // in seconds
+        long travelTime; // másodpercekben
         EdgeType type;
-        LocalTime departureTime; // Only for transit edges
-        String tripId; // Only for transit edges
+        LocalTime departureTime; // Csak a menetrend szerinti élekhez
+        String tripId; // Csak a menetrend szerinti élekhez
 
+        /**
+         * Él konstruktor.
+         *
+         * @param toStopId      Cél megálló azonosítója.
+         * @param travelTime    Utazási idő másodpercekben.
+         * @param type          Az él típusa.
+         * @param departureTime Indulási idő (csak menetrend szerinti élekhez).
+         * @param tripId        Utazás azonosítója (csak menetrend szerinti élekhez).
+         */
         Edge(String toStopId, long travelTime, EdgeType type, LocalTime departureTime, String tripId) {
             this.toStopId = toStopId;
             this.travelTime = travelTime;
@@ -398,16 +486,29 @@ public class TripPlanner {
         }
     }
 
-    // Node entry for the priority queue
+    /**
+     * A csomópont bejegyzés az algoritmusban.
+     */
     private static class NodeEntry {
         String stopId;
-        long earliestArrivalTime; // in seconds from midnight
+        long earliestArrivalTime;
         NodeEntry previousNode;
         int transfers;
         String tripId;
         Edge edge;
         long waitTimeBefore;
 
+        /**
+         * Csomópont bejegyzés konstruktor.
+         *
+         * @param stopId             A megálló azonosítója.
+         * @param earliestArrivalTime A legkorábbi érkezési idő.
+         * @param previousNode       Előző csomópont.
+         * @param transfers          Átszállások száma.
+         * @param tripId             Utazás azonosítója.
+         * @param edge               Él objektum.
+         * @param waitTimeBefore     Várakozási idő az él előtt.
+         */
         NodeEntry(String stopId, long earliestArrivalTime, NodeEntry previousNode, int transfers, String tripId, Edge edge, long waitTimeBefore) {
             this.stopId = stopId;
             this.earliestArrivalTime = earliestArrivalTime;
@@ -419,15 +520,23 @@ public class TripPlanner {
         }
     }
 
-    // Haversine formula to calculate the distance between two points
+    /**
+     * Haversine formula a két pont közötti távolság kiszámításához.
+     *
+     * @param lat1 Első pont szélessége.
+     * @param lon1 Első pont hosszúsága.
+     * @param lat2 Második pont szélessége.
+     * @param lon2 Második pont hosszúsága.
+     * @return A távolság méterben.
+     */
     public static double haversine(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371; // Radius of the Earth in kilometers
+        final int R = 6371; // A Föld sugara kilométerben
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c * 1000; // Convert to meters
+        return R * c * 1000; // Átváltás méterre
     }
 }
