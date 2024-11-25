@@ -89,6 +89,8 @@ public class TransitItineraryWithLines extends JFrame {
         int spacerWidth = 10; // Spacer between line and details
 
         List<TripPlanLeg> filteredTripPlanLegs = new ArrayList<>();
+        numberOfStops.clear();
+
         if (!expanded) {
             // Reset tripPlan to a copy of the original list
             tripPlan = new ArrayList<>(originalTripPlan);
@@ -160,10 +162,9 @@ public class TransitItineraryWithLines extends JFrame {
         for (int i = 0; i < tripPlan.size(); i++) {
             TripPlanLeg leg = tripPlan.get(i);
             Integer nof =  numberOfStops.get(i);
-            boolean isFirstLeg = (i == 0);
 
             // Create and add the panel for each leg
-            JPanel legPanel = createStopPanel(leg, isFirstLeg, timeWidth, lineWidth, spacerWidth, nof);
+            JPanel legPanel = createStopPanel(leg, timeWidth, lineWidth, spacerWidth, nof);
             mainPanel.add(legPanel);
         }
     }
@@ -185,7 +186,8 @@ public class TransitItineraryWithLines extends JFrame {
                     writer.write("|\n");
                     writer.write("|-- (" + routeShortName + " ▶ " + toStopName + ") ");
                     if (!expanded) {
-                        writer.write(numberOfStops.get(i) + " stations- ");
+                        int nos = numberOfStops.get(i);
+                        writer.write(nos + (nos == 1 ? " stop- " : " stops- "));
                     }
                     writer.write(durationMinutes + " Minutes\n");
                     writer.write("|\n");
@@ -217,7 +219,7 @@ public class TransitItineraryWithLines extends JFrame {
         }
     }
 
-    private JPanel createStopPanel(TripPlanLeg leg, boolean isFirstLeg, int timeWidth, int lineWidth, int spacerWidth, int numberOfStops) {
+    private JPanel createStopPanel(TripPlanLeg leg, int timeWidth, int lineWidth, int spacerWidth, int numberOfStops) {
         JPanel stopPanel = createBasePanel();
 
         // Time label
@@ -229,14 +231,14 @@ public class TransitItineraryWithLines extends JFrame {
         stopPanel.add(Box.createRigidArea(new Dimension(spacerWidth, 0)));
 
         // Line component inside a vertical box to align multiple lines
-        JPanel lineContainer = createLineContainer(lineWidth, new LineComponent(leg, isFirstLeg, false));
+        JPanel lineContainer = createLineContainer(lineWidth, new LineComponent(leg, false));
         stopPanel.add(lineContainer);
 
         // Spacer between line and details
         stopPanel.add(Box.createRigidArea(new Dimension(spacerWidth, 0)));
 
         // Details panel
-        JPanel detailsPanel = createDetailsPanel(leg, isFirstLeg, numberOfStops);
+        JPanel detailsPanel = createDetailsPanel(leg, numberOfStops);
         stopPanel.add(detailsPanel);
 
         return stopPanel;
@@ -254,7 +256,7 @@ public class TransitItineraryWithLines extends JFrame {
         stopPanel.add(Box.createRigidArea(new Dimension(spacerWidth, 0)));
 
         // Line component (only top part since it's the last stop)
-        JPanel lineContainer = createLineContainer(lineWidth, new LineComponent(null, false, true));
+        JPanel lineContainer = createLineContainer(lineWidth, new LineComponent(null, true));
         stopPanel.add(lineContainer);
 
         // Spacer between line and details
@@ -314,18 +316,18 @@ public class TransitItineraryWithLines extends JFrame {
         return lineContainer;
     }
 
-    private JPanel createDetailsPanel(TripPlanLeg leg, boolean isFirstLeg, int numberOfStops) {
+    private JPanel createDetailsPanel(TripPlanLeg leg, int numberOfStops) {
         JPanel detailsPanel = new JPanel();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
         detailsPanel.setBackground(Color.WHITE);
-        detailsPanel.setAlignmentY(isFirstLeg ? Component.BOTTOM_ALIGNMENT : Component.TOP_ALIGNMENT);
+        detailsPanel.setAlignmentY(Component.TOP_ALIGNMENT);
         detailsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
 
         // Stop name
         String stopName = leg.getFromStop().getStopName();
         JLabel stopLabel = new JLabel(stopName);
         stopLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        stopLabel.setAlignmentY(isFirstLeg ? Component.BOTTOM_ALIGNMENT : Component.TOP_ALIGNMENT);
+        stopLabel.setAlignmentY(Component.TOP_ALIGNMENT);
 
         // Transport details
         String transport = getTransportDetails(leg, numberOfStops);
@@ -376,12 +378,10 @@ public class TransitItineraryWithLines extends JFrame {
 
     private class LineComponent extends JPanel {
         private final TripPlanLeg leg;
-        private final boolean isFirstLeg;
         private final boolean isLastLeg;
 
-        public LineComponent(TripPlanLeg leg, boolean isFirstLeg, boolean isLastLeg) {
+        public LineComponent(TripPlanLeg leg, boolean isLastLeg) {
             this.leg = leg;
-            this.isFirstLeg = isFirstLeg;
             this.isLastLeg = isLastLeg;
             setBackground(Color.WHITE);
         }
@@ -396,9 +396,6 @@ public class TransitItineraryWithLines extends JFrame {
             int yStart = 0;
             int yEnd = getHeight();
 
-            if (isFirstLeg) {
-                yStart = getHeight() / 2;
-            }
             if (isLastLeg) {
                 yEnd = getHeight() / 2;
             }
