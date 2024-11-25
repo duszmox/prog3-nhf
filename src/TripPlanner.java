@@ -380,16 +380,6 @@ public class TripPlanner {
         }
     }
 
-    // Helper function to get model.Trip by ID
-    private Trip getTripById(String tripId) {
-        for (Trip trip : trips) {
-            if (trip.getTripId().equals(tripId)) {
-                return trip;
-            }
-        }
-        return null;
-    }
-
 
     // Edge class to represent connections between stops
     private static class Edge {

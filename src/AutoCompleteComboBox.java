@@ -33,7 +33,7 @@ public class AutoCompleteComboBox extends JComboBox<Stop> {
                                 filteredItems.add(item);
                             }
                         }
-                        if (filteredItems.size() > 0) {
+                        if (!filteredItems.isEmpty()) {
                             setModel(new DefaultComboBoxModel<>(filteredItems.toArray(new Stop[0])));
                             textField.setText(text);
                             showPopup();

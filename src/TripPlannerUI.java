@@ -13,20 +13,17 @@ import java.nio.file.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-// Uncomment this if using SwingX library
-// import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 
 public class TripPlannerUI extends JFrame {
 
-    private JComboBox<Stop> startStopComboBox;
-    private JComboBox<Stop> endStopComboBox;
-    private JButton planTripButton;
-    private JSpinner dateSpinner;
-    private JSpinner timeSpinner;
-    private TripPlanner tripPlanner;
-    private JDialog loadingDialog;
-    private List<Route> routes;
-    private List<Trip> trips;
+    private final JComboBox<Stop> startStopComboBox;
+    private final JComboBox<Stop> endStopComboBox;
+    private final JButton planTripButton;
+    private final JSpinner dateSpinner;
+    private final JSpinner timeSpinner;
+    private final TripPlanner tripPlanner;
+    private final List<Route> routes;
+    private final List<Trip> trips;
 
 
     public TripPlannerUI(List<Stop> stops, List<StopTime> stopTimes, List<Pathway> pathways, List<Trip> trips, List<Route> routes) {
@@ -57,12 +54,6 @@ public class TripPlannerUI extends JFrame {
         // If using custom autocomplete
         startStopComboBox = new AutoCompleteComboBox(parentStations);
         endStopComboBox = new AutoCompleteComboBox(parentStations);
-
-        // If using SwingX library
-        // startStopComboBox = new JComboBox<>(parentStations.toArray(new model.Stop[0]));
-        // endStopComboBox = new JComboBox<>(parentStations.toArray(new model.Stop[0]));
-        // AutoCompleteDecorator.decorate(startStopComboBox);
-        // AutoCompleteDecorator.decorate(endStopComboBox);
 
         planTripButton = new JButton("Plan Trip");
 
@@ -95,7 +86,7 @@ public class TripPlannerUI extends JFrame {
         add(panel);
 
         // Add action listener to the button
-        planTripButton.addActionListener(e -> planTrip());
+        planTripButton.addActionListener(_ -> planTrip());
     }
 
     private void planTrip() {
@@ -123,9 +114,9 @@ public class TripPlannerUI extends JFrame {
         SwingUtilities.invokeLater(() -> loadingDialog.setVisible(true));
 
         // Use SwingWorker to run in the background
-        SwingWorker<List<TripPlanLeg>, Void> worker = new SwingWorker<List<TripPlanLeg>, Void>() {
+        SwingWorker<List<TripPlanLeg>, Void> worker = new SwingWorker<>() {
             @Override
-            protected List<TripPlanLeg> doInBackground() throws Exception {
+            protected List<TripPlanLeg> doInBackground() {
                 // Call the TripPlanner
                 return tripPlanner.findOptimalPath(startStop.getStopId(), endStop.getStopId(), date, departureTime);
             }
@@ -166,25 +157,6 @@ public class TripPlannerUI extends JFrame {
         worker.execute();
     }
 
-    private void showLoadingDialog() {
-        loadingDialog = new JDialog(this, "Loading", true); // Modal dialog
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.add(new JLabel("Calculating the optimal path. Please wait...", JLabel.CENTER), BorderLayout.CENTER);
-        loadingDialog.getContentPane().add(panel);
-        loadingDialog.setSize(300, 100);
-        loadingDialog.setLocationRelativeTo(this);
-        loadingDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-        loadingDialog.setResizable(false);
-        loadingDialog.setVisible(true);
-    }
-
-    private void hideLoadingDialog() {
-        if (loadingDialog != null) {
-            loadingDialog.dispose();
-            loadingDialog = null;
-        }
-    }
-
 
     public static void downloadAndExtractGtfsData() throws IOException {
         String url = "https://bkk.hu/gtfs/budapest_gtfs.zip";
@@ -195,8 +167,9 @@ public class TripPlannerUI extends JFrame {
             System.out.println("GTFS data not found. Downloading...");
 
             // Download the zip file
+            Path target = Paths.get(zipFilePath);
             try (InputStream in = new URL(url).openStream()) {
-                Files.copy(in, Paths.get(zipFilePath), StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
             }
 
             // Extract the zip file
@@ -204,7 +177,7 @@ public class TripPlannerUI extends JFrame {
             unzip(zipFilePath, destDir);
 
             // Delete the zip file after extraction
-            Files.delete(Paths.get(zipFilePath));
+            Files.delete(target);
             System.out.println("GTFS data extracted successfully.");
         }
     }

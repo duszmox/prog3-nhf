@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.time.LocalTime;
 
 public class TripPlanLeg {
-    private LegType legType;          // Type of leg: TRANSIT, WALK, TRANSFER
+    private final LegType legType;          // Type of leg: TRANSIT, WALK, TRANSFER
     private Stop fromStop;            // Starting stop or location
     private Stop toStop;              // Ending stop or location
     private LocalTime startTime;      // Start time of the leg
@@ -68,6 +68,7 @@ public class TripPlanLeg {
     public LegType getLegType() {
         return legType;
     }
+
     public void setFromStop(Stop fromStop) {
         this.fromStop = fromStop;
     }

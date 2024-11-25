@@ -3,14 +3,7 @@ import java.time.LocalTime;
 public class TimeHelper {
 
     // Nested class to return both the time and if it's the next day
-    public static class TimeResult {
-        public final LocalTime time;
-        public final boolean isNextDay;
-
-        public TimeResult(LocalTime time, boolean isNextDay) {
-            this.time = time;
-            this.isNextDay = isNextDay;
-        }
+        public record TimeResult(LocalTime time, boolean isNextDay) {
     }
 
     // Method to handle times like "24:28:00"
