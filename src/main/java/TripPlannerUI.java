@@ -67,6 +67,10 @@ public class TripPlannerUI extends JFrame {
         List<Stop> parentStations = new ArrayList<>();
         for (Stop stop : stops) {
             if (stop.getParentStation().isEmpty()) {
+                if (parentStations.stream().anyMatch(ps ->
+                        ps.getStopName().equals(stop.getStopName()) && TripPlanner.haversine(ps.getStopLat(), ps.getStopLon(), stop.getStopLat(), stop.getStopLon()) < 200)) {
+                    continue;
+                }
                 parentStations.add(stop);
             }
         }
